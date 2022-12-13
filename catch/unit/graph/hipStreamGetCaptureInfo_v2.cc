@@ -17,90 +17,74 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-
-Testcase Scenarios
-------------------
-Functional:
-1) Start stream capture and get capture info v2. Verify api is success, capture status is hipStreamCaptureStatusActive,
- identifier returned is valid/non-zero, graph object is returned.
-2) When stream capture is in progress, create dependent nodes by creating multistream dependencies and verify the api returns
- valid dependent nodes.
-3) End stream capture and get capture info. Verify api is success, capture status is hipStreamCaptureStatusNone and
- identifier/graph/nodes are not returned by api.
-4) When optional parameters are not passed, make sure api still returns capture status of stream.
-5) Begin capture on hipStreamPerThread, get capture info v2 and validate results.
-6) Perform multiple captures and verify the identifier returned is unique.
-
-Parameter Validation/Negative:
-1) Capture Status location as nullptr and verify api returns error code.
-2) Stream as nullptr and verify api returns error code.
-
-*/
-
-#include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
+#include <hip_test_defgroups.hh>
 
-constexpr size_t N = 1000000;
-constexpr int LAUNCH_ITERS = 1;
+#include "stream_capture_common.hh"
 
 /**
- * Validates stream capture infov2, launches graph and verifies results
+ * @addtogroup hipStreamGetCaptureInfo_v2 hipStreamGetCaptureInfo_v2
+ * @{
+ * @ingroup GraphTest
+ * `hipStreamGetCaptureInfo_v2(hipStream_t stream, hipStreamCaptureStatus
+ * *captureStatus_out, unsigned long long *id_out __dparm(0), hipGraph_t
+ * *graph_out __dparm(0), const hipGraphNode_t **dependencies_out __dparm(0),
+ * size_t *numDependencies_out __dparm(0)))` - Get stream's capture state
  */
-void validateStreamCaptureInfoV2(hipStream_t mstream) {
-  hipStream_t stream1{nullptr}, stream2{nullptr}, streamForLaunch{nullptr};
-  hipEvent_t memcpyEvent1, memsetEvent2, forkStreamEvent;
+
+void checkStreamCaptureInfo_v2(hipStreamCaptureMode mode, hipStream_t stream) {
+  constexpr size_t N = 1000000;
+  size_t Nbytes = N * sizeof(float);
+
   hipGraph_t graph{nullptr}, capInfoGraph{nullptr};
   hipGraphExec_t graphExec{nullptr};
-  constexpr unsigned blocks = 512;
-  constexpr unsigned threadsPerBlock = 256;
-  const hipGraphNode_t *nodelist{};
-  size_t Nbytes = N * sizeof(float), numDependencies;
-  float *A_d, *C_d;
-  float *A_h, *C_h;
-  A_h = reinterpret_cast<float*>(malloc(Nbytes));
-  C_h = reinterpret_cast<float*>(malloc(Nbytes));
-  REQUIRE(A_h != nullptr);
-  REQUIRE(C_h != nullptr);
-  HIP_CHECK(hipMalloc(&A_d, Nbytes));
-  HIP_CHECK(hipMalloc(&C_d, Nbytes));
-  REQUIRE(A_d != nullptr);
-  REQUIRE(C_d != nullptr);
-  HIP_CHECK(hipStreamCreate(&streamForLaunch));
+  const hipGraphNode_t* nodelist{};
+  int numDepsCreated = 0;
+  hipStreamCaptureStatus captureStatus{hipStreamCaptureStatusNone};
+  hipGraphNodeType type(hipGraphNodeTypeEmpty);
+  unsigned long long capSequenceID = 0;  // NOLINT
+  size_t numDependencies;
 
-  // Initialize input buffer
-  for (size_t i = 0; i < N; ++i) {
-      A_h[i] = 3.146f + i;  // Pi
+  LinearAllocGuard<float> A_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> B_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> A_d(LinearAllocs::hipMalloc, Nbytes);
+  LinearAllocGuard<float> B_d(LinearAllocs::hipMalloc, Nbytes);
+
+  EventsGuard events_guard(3);
+  StreamsGuard streams_guard(2);
+
+  SECTION("Linear sequence graph") {
+    HIP_CHECK(hipStreamBeginCapture(stream, mode));
+    captureSequenceLinear(A_h.host_ptr(), A_d.ptr(), B_h.host_ptr(), B_d.ptr(), N, stream);
+    HIP_CHECK(hipStreamGetCaptureInfo_v2(stream, &captureStatus, &capSequenceID, &capInfoGraph,
+                                         &nodelist, &numDependencies));
+    numDepsCreated = 1;
+    HIP_CHECK(hipGraphNodeGetType(nodelist[0], &type));
+    if ((type != hipGraphNodeTypeMemset) && (type != hipGraphNodeTypeMemcpy)) {
+      INFO("Type0 returned as " << type);
+      REQUIRE(false);
+    }
   }
 
-  // Create cross stream dependencies.
-  // memset/memcpy operations are done on stream1 and stream2
-  // and they are joined back to mainstream
-  HIP_CHECK(hipStreamCreate(&stream1));
-  HIP_CHECK(hipStreamCreate(&stream2));
-  HIP_CHECK(hipEventCreate(&memcpyEvent1));
-  HIP_CHECK(hipEventCreate(&memsetEvent2));
-  HIP_CHECK(hipEventCreate(&forkStreamEvent));
-
-  HIP_CHECK(hipStreamBeginCapture(mstream, hipStreamCaptureModeGlobal));
-  HIP_CHECK(hipEventRecord(forkStreamEvent, mstream));
-  HIP_CHECK(hipStreamWaitEvent(stream1, forkStreamEvent, 0));
-  HIP_CHECK(hipStreamWaitEvent(stream2, forkStreamEvent, 0));
-  HIP_CHECK(hipMemsetAsync(A_d, 0, Nbytes, stream1));
-  HIP_CHECK(hipMemcpyAsync(A_d, A_h, Nbytes, hipMemcpyHostToDevice, stream1));
-  HIP_CHECK(hipEventRecord(memcpyEvent1, stream1));
-  HIP_CHECK(hipMemsetAsync(C_d, 0, Nbytes, stream2));
-  HIP_CHECK(hipEventRecord(memsetEvent2, stream2));
-  HIP_CHECK(hipStreamWaitEvent(mstream, memcpyEvent1, 0));
-  HIP_CHECK(hipStreamWaitEvent(mstream, memsetEvent2, 0));
-
-  hipStreamCaptureStatus captureStatus{hipStreamCaptureStatusNone};
-  unsigned long long capSequenceID = 0;  // NOLINT
-  constexpr int numDepsCreated = 2;      // Num of dependencies created
-
-  HIP_CHECK(hipStreamGetCaptureInfo_v2(mstream, &captureStatus,
-                &capSequenceID, &capInfoGraph, &nodelist, &numDependencies));
+  SECTION("Branched sequence graph") {
+    HIP_CHECK(hipStreamBeginCapture(stream, mode));
+    captureSequenceBranched(A_h.host_ptr(), A_d.ptr(), B_h.host_ptr(), B_d.ptr(), N, stream,
+                            streams_guard.stream_list(), events_guard.event_list());
+    HIP_CHECK(hipStreamGetCaptureInfo_v2(stream, &captureStatus, &capSequenceID, &capInfoGraph,
+                                         &nodelist, &numDependencies));
+    numDepsCreated = 2;
+    HIP_CHECK(hipGraphNodeGetType(nodelist[0], &type));
+    if ((type != hipGraphNodeTypeMemset) && (type != hipGraphNodeTypeMemcpy)) {
+      INFO("Type0 returned as " << type);
+      REQUIRE(false);
+    }
+    HIP_CHECK(hipGraphNodeGetType(nodelist[1], &type));
+    if ((type != hipGraphNodeTypeMemset) && (type != hipGraphNodeTypeMemcpy)) {
+      INFO("Type1 returned as " << type);
+      REQUIRE(false);
+    }
+  }
 
   // verify capture status is active, sequence id is valid, graph is returned,
   REQUIRE(captureStatus == hipStreamCaptureStatusActive);
@@ -108,27 +92,10 @@ void validateStreamCaptureInfoV2(hipStream_t mstream) {
   REQUIRE(capInfoGraph != nullptr);
   REQUIRE(numDependencies == numDepsCreated);
 
-  // verify dependency nodes list returned is the one we created.
-  hipGraphNodeType type(hipGraphNodeTypeEmpty);
-
-  HIP_CHECK(hipGraphNodeGetType(nodelist[0], &type));
-  if ((type != hipGraphNodeTypeMemset) && (type != hipGraphNodeTypeMemcpy)) {
-    INFO("Type0 returned as " << type);
-    REQUIRE(false);
-  }
-
-  HIP_CHECK(hipGraphNodeGetType(nodelist[1], &type));
-  if ((type != hipGraphNodeTypeMemset) && (type != hipGraphNodeTypeMemcpy)) {
-    INFO("Type1 returned as " << type);
-    REQUIRE(false);
-  }
-
-  hipLaunchKernelGGL(HipTest::vector_square, dim3(blocks),
-                              dim3(threadsPerBlock), 0, mstream, A_d, C_d, N);
+  captureSequenceCompute(A_d.ptr(), B_h.host_ptr(), B_d.ptr(), N, stream);
 
   // End capture and verify graph is returned
-  HIP_CHECK(hipMemcpyAsync(C_h, C_d, Nbytes, hipMemcpyDeviceToHost, mstream));
-  HIP_CHECK(hipStreamEndCapture(mstream, &graph));
+  HIP_CHECK(hipStreamEndCapture(stream, &graph));
   REQUIRE(graph != nullptr);
 
   // verify capture status is inactive and other params are not updated
@@ -136,8 +103,8 @@ void validateStreamCaptureInfoV2(hipStream_t mstream) {
   capInfoGraph = nullptr;
   numDependencies = 0;
   nodelist = nullptr;
-  HIP_CHECK(hipStreamGetCaptureInfo_v2(mstream, &captureStatus,
-                &capSequenceID, &capInfoGraph, &nodelist, &numDependencies));
+  HIP_CHECK(hipStreamGetCaptureInfo_v2(stream, &captureStatus, &capSequenceID, &capInfoGraph,
+                                       &nodelist, &numDependencies));
   REQUIRE(captureStatus == hipStreamCaptureStatusNone);
   REQUIRE(capSequenceID == 0);
   REQUIRE(capInfoGraph == nullptr);
@@ -145,88 +112,88 @@ void validateStreamCaptureInfoV2(hipStream_t mstream) {
   REQUIRE(numDependencies == 0);
 
   // Verify api still returns capture status when optional args are not passed
-  HIP_CHECK(hipStreamGetCaptureInfo_v2(mstream, &captureStatus));
+  HIP_CHECK(hipStreamGetCaptureInfo_v2(stream, &captureStatus));
   REQUIRE(captureStatus == hipStreamCaptureStatusNone);
 
   HIP_CHECK(hipGraphInstantiate(&graphExec, graph, nullptr, nullptr, 0));
   REQUIRE(graphExec != nullptr);
 
   // Replay the recorded sequence multiple times
-  for (int i = 0; i < LAUNCH_ITERS; i++) {
-    HIP_CHECK(hipGraphLaunch(graphExec, streamForLaunch));
+  for (int i = 0; i < kLaunchIters; i++) {
+    std::fill_n(A_h.host_ptr(), N, static_cast<float>(i));
+    HIP_CHECK(hipGraphLaunch(graphExec, stream));
+    HIP_CHECK(hipStreamSynchronize(stream));
+    ArrayFindIfNot(B_h.host_ptr(), static_cast<float>(i) * static_cast<float>(i), N);
   }
 
-  HIP_CHECK(hipStreamSynchronize(streamForLaunch));
-
+  HIP_CHECK(hipGraphExecDestroy(graphExec))
   HIP_CHECK(hipGraphDestroy(graph));
-  HIP_CHECK(hipStreamDestroy(streamForLaunch));
-  HIP_CHECK(hipStreamDestroy(stream1));
-  HIP_CHECK(hipStreamDestroy(stream2));
-  HIP_CHECK(hipEventDestroy(forkStreamEvent));
-  HIP_CHECK(hipEventDestroy(memcpyEvent1));
-  HIP_CHECK(hipEventDestroy(memsetEvent2));
-  HIP_CHECK(hipFree(A_d));
-  HIP_CHECK(hipFree(C_d));
-
-  // Validate the computation
-  for (size_t i = 0; i < N; i++) {
-    if (C_h[i] != A_h[i] * A_h[i]) {
-      INFO("A and C not matching at " << i << " C_h[i] " << C_h[i]
-                                           << " A_h[i] " << A_h[i]);
-      REQUIRE(false);
-    }
-  }
-  free(A_h);
-  free(C_h);
 }
 
 /**
- * Basic Functional Test for stream capture and getting capture info V2.
- * Regular/custom stream is used for stream capture.
+ * Test Description
+ * ------------------------
+ *    - Test to verify that hipStreamCaptureStatusActive is returned during
+ * stream capture, correct number of created dependencies is returned and
+ * sequence ID is valid. When capture is ended, status is changed to
+ * hipStreamCaptureStatusNone and error is not reported when some arguments are
+ * not passed.
+ *        -# Sequence graph is linear, number of created dependencies is 1, node
+ * type is correct
+ *        -# Sequence graph is branched, number of created dependencies is 2,
+ * node types are correct
+ * Test source
+ * ------------------------
+ *    - catch\unit\graph\hipStreamGetCaptureInfo_v2.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipStreamGetCaptureInfo_v2_BasicFunctional") {
-  hipStream_t streamForCapture;
+TEST_CASE("Unit_hipStreamGetCaptureInfo_v2_Positive_Functional") {
+  const auto stream_type = GENERATE(Streams::perThread, Streams::created);
+  StreamGuard stream_guard(stream_type);
+  hipStream_t stream = stream_guard.stream();
 
-  HIP_CHECK(hipStreamCreate(&streamForCapture));
-  validateStreamCaptureInfoV2(streamForCapture);
-  HIP_CHECK(hipStreamDestroy(streamForCapture));
+  const hipStreamCaptureMode captureMode = GENERATE(
+      hipStreamCaptureModeGlobal, hipStreamCaptureModeThreadLocal, hipStreamCaptureModeRelaxed);
+
+  checkStreamCaptureInfo_v2(captureMode, stream);
 }
 
 /**
- * Test performs stream capture on hipStreamPerThread and validates
- * capture info V2.
+ * Test Description
+ * ------------------------
+ *    - Test to verify stream capture on multiple streams and verifies
+ * uniqueness of identifiers returned from capture Info V2:
+ * Test source
+ * ------------------------
+ *    - catch\unit\graph\hipStreamGetCaptureInfo_v2.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipStreamGetCaptureInfo_v2_hipStreamPerThread") {
-  validateStreamCaptureInfoV2(hipStreamPerThread);
-}
-
-/**
- * Test starts stream capture on multiple streams and verifies uniqueness of
- * identifiers returned from capture Info V2.
- */
-TEST_CASE("Unit_hipStreamGetCaptureInfo_v2_UniqueID") {
+TEST_CASE("Unit_hipStreamGetCaptureInfo_v2_Positive_UniqueID") {
   constexpr int numStreams = 100;
-  hipStream_t streams[numStreams]{};
   hipStreamCaptureStatus captureStatus{hipStreamCaptureStatusNone};
   std::vector<int> idlist;
   unsigned long long capSequenceID{};  // NOLINT
   hipGraph_t graph{nullptr};
 
+  StreamsGuard streams(numStreams);
+
   for (int i = 0; i < numStreams; i++) {
-    HIP_CHECK(hipStreamCreate(&streams[i]));
     HIP_CHECK(hipStreamBeginCapture(streams[i], hipStreamCaptureModeGlobal));
-    HIP_CHECK(hipStreamGetCaptureInfo_v2(streams[i], &captureStatus,
-                                 &capSequenceID, nullptr, nullptr, nullptr));
+    HIP_CHECK(hipStreamGetCaptureInfo_v2(streams[i], &captureStatus, &capSequenceID, nullptr,
+                                         nullptr, nullptr));
     REQUIRE(captureStatus == hipStreamCaptureStatusActive);
     REQUIRE(capSequenceID > 0);
     idlist.push_back(capSequenceID);
   }
 
   for (int i = 0; i < numStreams; i++) {
-    for (int j = i+1; j < numStreams; j++) {
+    for (int j = i + 1; j < numStreams; j++) {
       if (idlist[i] == idlist[j]) {
-        INFO("Same identifier returned for stream "
-                                          << i << " and stream " << j);
+        INFO("Same identifier returned for stream " << i << " and stream " << j);
         REQUIRE(false);
       }
     }
@@ -235,46 +202,58 @@ TEST_CASE("Unit_hipStreamGetCaptureInfo_v2_UniqueID") {
   for (int i = 0; i < numStreams; i++) {
     HIP_CHECK(hipStreamEndCapture(streams[i], &graph));
     HIP_CHECK(hipGraphDestroy(graph));
-    HIP_CHECK(hipStreamDestroy(streams[i]));
   }
 }
 
 /**
- * Parameter validation/Negative tests for api
+ * Test Description
+ * ------------------------
+ *    - Test to verify API behavior with invalid arguments:
+ *        -# Capture status is nullptr
+ *        -# Capture status checked on legacy/null stream
+ *        -# Capture status when stream is uninitialized
+ * Test source
+ * ------------------------
+ *    - catch\unit\graph\hipStreamGetCaptureInfo_v2.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipStreamGetCaptureInfo_v2_ParamValidation") {
-  hipError_t ret;
-  hipStream_t stream;
-  float *A_d;
-  hipGraph_t graph{}, capInfoGraph{};
+TEST_CASE("Unit_hipStreamGetCaptureInfo_v2_Negative_Parameters") {
+  hipGraph_t capInfoGraph{};
   hipStreamCaptureStatus captureStatus;
   unsigned long long capSequenceID;  // NOLINT
   size_t numDependencies;
-  const hipGraphNode_t *nodelist{};
-  constexpr int numBytes{100};
+  const hipGraphNode_t* nodelist{};
 
-  HIP_CHECK(hipMalloc(&A_d, numBytes));
-  HIP_CHECK(hipStreamCreate(&stream));
-  HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
-  HIP_CHECK(hipMemsetAsync(A_d, 0, numBytes, stream));
+  const auto stream_type = GENERATE(Streams::perThread, Streams::created);
+  StreamGuard stream_guard(stream_type);
+  hipStream_t stream = stream_guard.stream();
 
   SECTION("Capture Status location as nullptr") {
-    ret = hipStreamGetCaptureInfo_v2(stream, nullptr,
-                &capSequenceID, &capInfoGraph, &nodelist, &numDependencies);
-    REQUIRE(ret == hipErrorInvalidValue);
+    HIP_CHECK_ERROR(hipStreamGetCaptureInfo_v2(stream, nullptr, &capSequenceID, &capInfoGraph,
+                                               &nodelist, &numDependencies),
+                    hipErrorInvalidValue);
   }
-
-  SECTION("Stream as nullptr") {
-    ret = hipStreamGetCaptureInfo_v2(nullptr, &captureStatus,
-                &capSequenceID, &capInfoGraph, &nodelist, &numDependencies);
-    if ((ret != hipErrorUnknown) && (ret != hipErrorStreamCaptureImplicit)) {
-      INFO("Ret : " << ret);
-      REQUIRE(false);
-    }
+#if HT_NVIDIA  // EXSWHTEC-216, EXSWHTEC-228
+  SECTION("Capture status when checked on null stream") {
+    hipGraph_t graph{nullptr};
+    HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
+    HIP_CHECK_ERROR(hipStreamGetCaptureInfo_v2(nullptr, &captureStatus, &capSequenceID,
+                                               &capInfoGraph, &nodelist, &numDependencies),
+                    hipErrorStreamCaptureImplicit);
+    HIP_CHECK(hipStreamEndCapture(stream, &graph));
+    HIP_CHECK(hipGraphDestroy(graph));
   }
+  SECTION("Capture status when stream is uninitialized") {
+    constexpr auto InvalidStream = [] {
+      StreamGuard sg(Streams::created);
+      return sg.stream();
+    };
 
-  HIP_CHECK(hipStreamEndCapture(stream, &graph));
-  HIP_CHECK(hipGraphDestroy(graph));
-  HIP_CHECK(hipStreamDestroy(stream));
-  HIP_CHECK(hipFree(A_d));
+    HIP_CHECK_ERROR(hipStreamGetCaptureInfo_v2(InvalidStream(), &captureStatus, &capSequenceID,
+                                               &capInfoGraph, &nodelist, &numDependencies),
+                    hipErrorContextIsDestroyed);
+  }
+#endif
 }

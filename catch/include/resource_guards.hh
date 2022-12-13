@@ -196,11 +196,11 @@ template <typename T> class DrvArrayAllocGuard {
   const hipExtent extent_;
 };
 
-enum class Streams { nullstream, perThread, created };
+enum class Streams { nullstream, perThread, created, withFlags, withPriority };
 
 class StreamGuard {
  public:
-  StreamGuard(const Streams stream_type) : stream_type_{stream_type} {
+  StreamGuard(const Streams stream_type, unsigned int flags = hipStreamDefault, int priority = 0) : stream_type_{stream_type}, flags_{flags}, priority_{priority} {
     switch (stream_type_) {
       case Streams::nullstream:
         stream_ = nullptr;
@@ -210,6 +210,11 @@ class StreamGuard {
         break;
       case Streams::created:
         HIP_CHECK(hipStreamCreate(&stream_));
+        break;
+      case Streams::withFlags:
+        HIP_CHECK(hipStreamCreateWithFlags(&stream_, flags_));
+      case Streams::withPriority:
+        HIP_CHECK(hipStreamCreateWithPriority(&stream_, flags_, priority_));
     }
   }
 
@@ -226,5 +231,53 @@ class StreamGuard {
 
  private:
   const Streams stream_type_;
+  unsigned int flags_;
+  int priority_;
   hipStream_t stream_;
+};
+
+class EventsGuard {
+public:
+  EventsGuard(size_t N) : events_(N) {
+    for (auto &e : events_) HIP_CHECK(hipEventCreate(&e));
+  }
+
+  EventsGuard(const EventsGuard&) = delete;
+  EventsGuard(EventsGuard&&) = delete;
+
+  ~EventsGuard() {
+    for (auto &e : events_) static_cast<void>(hipEventDestroy(e));
+  }
+
+  hipEvent_t& operator[](int index) { return events_[index]; }
+
+  operator hipEvent_t() const { return events_.at(0); }
+
+  std::vector<hipEvent_t>& event_list() { return events_; }
+
+private:
+  std::vector<hipEvent_t> events_;
+};
+
+class StreamsGuard {
+public:
+  StreamsGuard(size_t N) : streams_(N) {
+    for (auto &s : streams_) HIP_CHECK(hipStreamCreate(&s));
+  }
+
+  StreamsGuard(const StreamsGuard&) = delete;
+  StreamsGuard(StreamsGuard&&) = delete;
+
+  ~StreamsGuard() {
+    for (auto &s : streams_) static_cast<void>(hipStreamDestroy(s));
+  }
+
+  hipStream_t& operator[](int index) { return streams_[index]; }
+
+  operator hipStream_t() const { return streams_.at(0); }
+
+  std::vector<hipStream_t>& stream_list() { return streams_; }
+
+private:
+  std::vector<hipStream_t> streams_;
 };
