@@ -17,160 +17,190 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Negative Testcase Scenarios :
-1) Pass stream as nullptr and verify there is no crash, api returns error code.
-2) Pass graph as nullptr and verify there is no crash, api returns error code.
-3) Pass graph as nullptr and  and stream as hipStreamPerThread verify there
-   is no crash, api returns error code.
-4) End capture on stream where capture has not yet started and verify
-   error code is returned.
-5) Destroy stream and try to end capture.
-6) Destroy Graph and try to end capture.
-7) Begin capture on a thread with mode other than hipStreamCaptureModeRelaxed
-   and try to end capture from different thread. Expect to return
-   hipErrorStreamCaptureWrongThread.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_kernels.hh>
+#include <hip_test_defgroups.hh>
 
-TEST_CASE("Unit_hipStreamEndCapture_Negative") {
-  hipError_t ret;
+#include "stream_capture_common.hh"
+
+/**
+ * @addtogroup hipStreamEndCapture hipStreamEndCapture
+ * @{
+ * @ingroup GraphTest
+ * `hipStreamEndCapture(hipStream_t stream, hipGraph_t *pGraph)` -
+ * ends capture on a stream, returning the captured graph
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *    - Test to verify API behavior with invalid arguments:
+ *        -# End capture on legacy/null stream
+ *        -# End capture when graph is nullptr
+ *        -# End capture on stream where capture has not yet started
+ *        -# Destroy stream and try to end capture
+ * Test source
+ * ------------------------
+ *    - catch\unit\graph\hipStreamEndCapture.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipStreamEndCapture_Negative_Parameters") {
+  hipGraph_t graph{nullptr};
+  const auto stream_type = GENERATE(Streams::perThread, Streams::created);
+  StreamGuard stream_guard(stream_type);
+  hipStream_t stream = stream_guard.stream();
+
   SECTION("Pass stream as nullptr") {
-    hipGraph_t graph;
-    ret = hipStreamEndCapture(nullptr, &graph);
-    REQUIRE(hipErrorIllegalState == ret);
+    HIP_CHECK_ERROR(hipStreamEndCapture(nullptr, &graph), hipErrorIllegalState);
   }
 #if HT_NVIDIA
   SECTION("Pass graph as nullptr") {
-    hipStream_t stream;
-    HIP_CHECK(hipStreamCreate(&stream));
-    ret = hipStreamEndCapture(stream, nullptr);
-    REQUIRE(hipErrorInvalidValue == ret);
-    HIP_CHECK(hipStreamDestroy(stream));
-  }
-  SECTION("Pass graph as nullptr and stream as hipStreamPerThread") {
-    ret = hipStreamEndCapture(hipStreamPerThread, nullptr);
-    REQUIRE(hipErrorInvalidValue == ret);
+    HIP_CHECK_ERROR(hipStreamEndCapture(stream, nullptr), hipErrorInvalidValue);
   }
 #endif
   SECTION("End capture on stream where capture has not yet started") {
-    hipStream_t stream;
-    hipGraph_t graph;
-    HIP_CHECK(hipStreamCreate(&stream));
-    ret = hipStreamEndCapture(stream, &graph);
-    REQUIRE(hipErrorIllegalState == ret);
-    HIP_CHECK(hipStreamDestroy(stream));
+    HIP_CHECK_ERROR(hipStreamEndCapture(stream, &graph), hipErrorIllegalState);
   }
   SECTION("Destroy stream and try to end capture") {
-    hipStream_t stream;
-    hipGraph_t graph;
-    HIP_CHECK(hipStreamCreate(&stream));
-    HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
-    HIP_CHECK(hipStreamDestroy(stream));
-    ret = hipStreamEndCapture(stream, &graph);
-    REQUIRE(hipErrorContextIsDestroyed == ret);
-  }
-  SECTION("Destroy graph and try to end capture in between") {
-    hipStream_t stream{nullptr};
-    hipGraph_t graph{nullptr};
-    constexpr unsigned blocks = 512;
-    constexpr unsigned threadsPerBlock = 256;
-    constexpr size_t N = 100000;
-    size_t Nbytes = N * sizeof(float);
-    float *A_d, *C_d;
-    float *A_h, *C_h;
-
-    A_h = reinterpret_cast<float*>(malloc(Nbytes));
-    C_h = reinterpret_cast<float*>(malloc(Nbytes));
-    REQUIRE(A_h != nullptr);
-    REQUIRE(C_h != nullptr);
-
-    // Fill with Phi + i
-    for (size_t i = 0; i < N; i++) {
-      A_h[i] = 1.618f + i;
-    }
-
-    HIP_CHECK(hipMalloc(&A_d, Nbytes));
-    HIP_CHECK(hipMalloc(&C_d, Nbytes));
-    REQUIRE(A_d != nullptr);
-    REQUIRE(C_d != nullptr);
-
-    HIP_CHECK(hipStreamCreate(&stream));
-    HIP_CHECK(hipGraphCreate(&graph, 0));
-    HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
-    HIP_CHECK(hipMemcpyAsync(A_d, A_h, Nbytes, hipMemcpyHostToDevice, stream));
-
-    HIP_CHECK(hipMemsetAsync(C_d, 0, Nbytes, stream));
-    hipLaunchKernelGGL(HipTest::vector_square, dim3(blocks),
-                                dim3(threadsPerBlock), 0, stream, A_d, C_d, N);
-    HIP_CHECK(hipMemcpyAsync(C_h, C_d, Nbytes, hipMemcpyDeviceToHost, stream));
-
-    HIP_CHECK(hipGraphDestroy(graph));
-    ret = hipStreamEndCapture(stream, &graph);
-    REQUIRE(hipSuccess == ret);
-
-    free(A_h);
-    free(C_h);
-    HIP_CHECK(hipFree(A_d));
-    HIP_CHECK(hipFree(C_d));
-    HIP_CHECK(hipStreamDestroy(stream));
+    hipStream_t destroyed_stream;
+    HIP_CHECK(hipStreamCreate(&destroyed_stream));
+    HIP_CHECK(hipStreamBeginCapture(destroyed_stream, hipStreamCaptureModeGlobal));
+    HIP_CHECK(hipStreamDestroy(destroyed_stream));
+    HIP_CHECK_ERROR(hipStreamEndCapture(destroyed_stream, &graph), hipErrorContextIsDestroyed);
   }
 }
 
-static void thread_func(hipStream_t stream, hipGraph_t graph) {
-  HIP_ASSERT(hipErrorStreamCaptureWrongThread ==
-             hipStreamEndCapture(stream, &graph));
-}
-
-TEST_CASE("Unit_hipStreamEndCapture_Thread_Negative") {
-  hipStream_t stream{nullptr};
+/**
+ * Test Description
+ * ------------------------
+ *    - Test to verify no error occurs when graph is destroyed before capture
+ * ends
+ * Test source
+ * ------------------------
+ *    - catch\unit\graph\hipStreamEndCapture.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipStreamEndCapture_Positive_GraphDestroy") {
   hipGraph_t graph{nullptr};
-  constexpr unsigned blocks = 512;
-  constexpr unsigned threadsPerBlock = 256;
-  constexpr size_t N = 100000;
+  constexpr size_t N = 1000000;
   size_t Nbytes = N * sizeof(float);
-  float *A_d, *C_d;
-  float *A_h, *C_h;
 
-  A_h = reinterpret_cast<float*>(malloc(Nbytes));
-  C_h = reinterpret_cast<float*>(malloc(Nbytes));
-  REQUIRE(A_h != nullptr);
-  REQUIRE(C_h != nullptr);
+  LinearAllocGuard<float> A_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> B_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> A_d(LinearAllocs::hipMalloc, Nbytes);
 
-  // Fill with Phi + i
-  for (size_t i = 0; i < N; i++) {
-    A_h[i] = 1.618f + i;
-  }
+  StreamGuard stream_guard(Streams::created);
+  hipStream_t stream = stream_guard.stream();
 
-  HIP_CHECK(hipMalloc(&A_d, Nbytes));
-  HIP_CHECK(hipMalloc(&C_d, Nbytes));
-  REQUIRE(A_d != nullptr);
-  REQUIRE(C_d != nullptr);
-
-  HIP_CHECK(hipStreamCreate(&stream));
+  const hipStreamCaptureMode captureMode = hipStreamCaptureModeGlobal;
   HIP_CHECK(hipGraphCreate(&graph, 0));
-  HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
-  HIP_CHECK(hipMemcpyAsync(A_d, A_h, Nbytes, hipMemcpyHostToDevice, stream));
 
-  HIP_CHECK(hipMemsetAsync(C_d, 0, Nbytes, stream));
-  hipLaunchKernelGGL(HipTest::vector_square, dim3(blocks),
-                              dim3(threadsPerBlock), 0, stream, A_d, C_d, N);
-  HIP_CHECK(hipMemcpyAsync(C_h, C_d, Nbytes, hipMemcpyDeviceToHost, stream));
+  HIP_CHECK(hipStreamBeginCapture(stream, captureMode));
+  captureSequenceSimple(A_h.host_ptr(), A_d.ptr(), B_h.host_ptr(), N, stream);
 
-  std::thread t(thread_func, stream, graph);
+  HIP_CHECK(hipGraphDestroy(graph));
+  HIP_CHECK(hipStreamEndCapture(stream, &graph));
+}
+
+static void thread_func_neg(hipStream_t stream, hipGraph_t graph) {
+  HIP_ASSERT(hipErrorStreamCaptureWrongThread == hipStreamEndCapture(stream, &graph));
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *    - Test to verify that when capture is initiated on a thread with mode
+ * other than hipStreamCaptureModeRelaxed and try to end capture from different
+ * thread, it is expected to return hipErrorStreamCaptureWrongThread
+ * Test source
+ * ------------------------
+ *    - catch\unit\graph\hipStreamEndCapture.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipStreamEndCapture_Negative_Thread") {
+  constexpr size_t N = 1000000;
+  size_t Nbytes = N * sizeof(float);
+
+  LinearAllocGuard<float> A_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> B_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> A_d(LinearAllocs::hipMalloc, Nbytes);
+
+  hipGraph_t graph{nullptr};
+  StreamGuard stream_guard(Streams::created);
+  hipStream_t stream = stream_guard.stream();
+
+  const hipStreamCaptureMode captureMode = hipStreamCaptureModeGlobal;
+  HIP_CHECK(hipGraphCreate(&graph, 0));
+
+  HIP_CHECK(hipStreamBeginCapture(stream, captureMode));
+  captureSequenceSimple(A_h.host_ptr(), A_d.ptr(), B_h.host_ptr(), N, stream);
+
+  std::thread t(thread_func_neg, stream, graph);
   t.join();
 
 #if HT_AMD
   HIP_CHECK(hipStreamEndCapture(stream, &graph));
 #endif
 
-  free(A_h);
-  free(C_h);
-  HIP_CHECK(hipFree(A_d));
-  HIP_CHECK(hipFree(C_d));
-  HIP_CHECK(hipStreamDestroy(stream));
   HIP_CHECK(hipGraphDestroy(graph));
 }
 
+static void thread_func_pos(hipStream_t stream, hipGraph_t* graph) {
+  HIP_CHECK(hipStreamEndCapture(stream, graph));
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *    - Test to verify that when capture is initiated on a thread with
+ * hipStreamCaptureModeRelaxed mode, end capture in a different thread is
+ * successful
+ * Test source
+ * ------------------------
+ *    - catch\unit\graph\hipStreamEndCapture.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipStreamEndCapture_Positive_Thread") {
+  constexpr size_t N = 1000000;
+  size_t Nbytes = N * sizeof(float);
+
+  LinearAllocGuard<float> A_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> B_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> A_d(LinearAllocs::hipMalloc, Nbytes);
+
+  hipGraph_t graph{nullptr};
+  hipGraphExec_t graphExec{nullptr};
+  StreamGuard stream_guard(Streams::created);
+  hipStream_t stream = stream_guard.stream();
+
+  const hipStreamCaptureMode captureMode = hipStreamCaptureModeRelaxed;
+
+  HIP_CHECK(hipStreamBeginCapture(stream, captureMode));
+  captureSequenceSimple(A_h.host_ptr(), A_d.ptr(), B_h.host_ptr(), N, stream);
+
+  std::thread t(thread_func_pos, stream, &graph);
+  t.join();
+  // Validate end capture is successful
+  REQUIRE(graph != nullptr);
+
+  HIP_CHECK(hipGraphInstantiate(&graphExec, graph, nullptr, nullptr, 0));
+
+  // Replay the recorded sequence multiple times
+  for (int i = 0; i < kLaunchIters; i++) {
+    std::fill_n(A_h.host_ptr(), N, static_cast<float>(i));
+    HIP_CHECK(hipGraphLaunch(graphExec, stream));
+    HIP_CHECK(hipStreamSynchronize(stream));
+    ArrayFindIfNot(B_h.host_ptr(), static_cast<float>(i), N);
+  }
+
+  HIP_CHECK(hipGraphExecDestroy(graphExec));
+  HIP_CHECK(hipGraphDestroy(graph));
+}
