@@ -228,3 +228,49 @@ class StreamGuard {
   const Streams stream_type_;
   hipStream_t stream_;
 };
+
+class VirtualMemoryGuard {
+ public:
+  void* virtual_memory_ptr;
+  hipMemGenericAllocationHandle_t handle;
+
+  VirtualMemoryGuard(const size_t size, const int deviceId=0,
+                     const hipMemGenericAllocationHandle_t* inheritedHandle=nullptr) {
+    hipMemAllocationProp properties{};
+    properties.type = hipMemAllocationTypePinned;
+    properties.location.id = deviceId;
+    properties.location.type = hipMemLocationTypeDevice;
+    hipMemAccessDesc access{};
+    access.flags = hipMemAccessFlagsProtReadWrite;
+    access.location = properties.location;
+    size_t granularity{0};
+
+    HIP_CHECK(hipMemGetAllocationGranularity(&granularity, &properties, hipMemAllocationGranularityRecommended));
+    allocation_size_ = granularity * ((size + granularity - 1) / granularity);
+    HIP_CHECK(hipMemAddressReserve(&virtual_memory_ptr, allocation_size_, 0, nullptr, 0));
+    if (inheritedHandle) {
+      is_handle_inherited_ = true;
+      handle = *inheritedHandle;
+    } else {
+      is_handle_inherited_ = false;
+      HIP_CHECK(hipMemCreate(&handle, allocation_size_, &properties, 0));
+    }
+    HIP_CHECK(hipMemMap(virtual_memory_ptr, allocation_size_, 0, handle, 0));
+    HIP_CHECK(hipMemSetAccess(virtual_memory_ptr, allocation_size_, &access, 1));
+  }
+
+  VirtualMemoryGuard(const VirtualMemoryGuard&) = delete;
+  VirtualMemoryGuard(VirtualMemoryGuard&&) = delete;
+
+  ~VirtualMemoryGuard() {
+    HIP_CHECK(hipMemUnmap(virtual_memory_ptr, allocation_size_));
+    if(!is_handle_inherited_) {
+      HIP_CHECK(hipMemRelease(handle));
+    }
+    HIP_CHECK(hipMemAddressFree(virtual_memory_ptr, allocation_size_));
+  }
+
+ private:
+  size_t allocation_size_;
+  bool is_handle_inherited_;
+};
