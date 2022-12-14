@@ -90,7 +90,6 @@ set(TEST_SRC
     hipMallocMngdMultiThread.cc
     hipMemPrefetchAsync.cc
     hipArray.cc
-    hipMemVmm.cc
     hipMemGetInfo.cc
     hipFree.cc
     hipMemcpySync.cc
