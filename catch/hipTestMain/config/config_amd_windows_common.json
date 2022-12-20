@@ -93,6 +93,10 @@
 	   "Note: needs to be enabled when streamPerThread issues are fixed",
 	   "Unit_hipStreamSynchronize_NullStreamAndStreamPerThread",
 	   "Note: intermittent Seg fault failure ",
-	   "Unit_hipGraphAddEventRecordNode_Functional_WithoutFlags"
+	   "Unit_hipGraphAddEventRecordNode_Functional_WithoutFlags",
+	   "Unit_hipGraphMemcpyNodeSetParamsToSymbol_Positive_Basic",
+	   "Unit_hipGraphExecMemcpyNodeSetParamsToSymbol_Positive_Basic",
+	   "Unit_hipGraphMemcpyNodeSetParamsFromSymbol_Positive_Basic",
+	   "Unit_hipGraphExecMemcpyNodeSetParamsFromSymbol_Positive_Basic"
 	]
 }
