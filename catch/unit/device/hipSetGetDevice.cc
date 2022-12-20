@@ -19,16 +19,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Verifies functionality of hipSetDevice/hipGetDevice api.
- * -- Basic Test to set and get valid device numbers.
- */
-
 #include <thread>
 
 #include <hip_test_common.hh>
 #include <threaded_zig_zag_test.hh>
 
+/**
+ * @addtogroup hipSetDevice hipSetDevice
+ * @{
+ * @ingroup DeviceTest
+ * `hipSetDevice(int deviceId)` -
+ * Set default device to be used for subsequent hip API calls from this thread.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs multiple set/get device operations and verifies
+ *    that the device that is set is the one that is gotten.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipSetGetDevice.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipSetDevice_BasicSetGet") {
   int numDevices = 0;
   int device{};
@@ -46,6 +61,18 @@ TEST_CASE("Unit_hipSetDevice_BasicSetGet") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs set/get operations for each detected
+ *    device from multiple threads.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipSetGetDevice.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetSetDevice_MultiThreaded") {
   auto maxThreads = std::thread::hardware_concurrency();
   auto deviceCount = HipTest::getDeviceCount();
@@ -87,6 +114,18 @@ TEST_CASE("Unit_hipGetSetDevice_MultiThreaded") {
   HIP_CHECK_THREAD_FINALIZE();
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs set/get device for separate devices on two
+ *    threads and validates device ordinance via memory allocation.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipSetGetDevice.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipSetGetDevice_Positive_Threaded_Basic") {
   class HipSetGetDeviceThreadedTest : public ThreadedZigZagTest<HipSetGetDeviceThreadedTest> {
    public:
@@ -125,6 +164,23 @@ TEST_CASE("Unit_hipSetGetDevice_Positive_Threaded_Basic") {
   test.run();
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that get/set device APIs can handle invalid parameters
+ *    -# Get device when device is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# Set device with ordinal number `-1`
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# Set device to the ID which is out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipSetGetDevice.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipSetGetDevice_Negative") {
   SECTION("Get Device - nullptr") { HIP_CHECK_ERROR(hipGetDevice(nullptr), hipErrorInvalidValue); }
 
@@ -134,6 +190,29 @@ TEST_CASE("Unit_hipSetGetDevice_Negative") {
     HIP_CHECK_ERROR(hipSetDevice(HipTest::getDeviceCount()), hipErrorInvalidDevice);
   }
 }
+
+/**
+ * End doxygen group hipSetDevice.
+ * @}
+ */
+
+/**
+ * @addtogroup hipGetDevice hipGetDevice
+ * @{
+ * @ingroup DeviceTest
+ * `hipGetDevice(int* deviceId)` -
+ * Return the default device id for the calling host thread.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipSetDevice_BasicSetGet
+ *  - @ref Unit_hipGetSetDevice_MultiThreaded
+ *  - @ref Unit_hipSetGetDevice_Negative
+ */
+
+/**
+ * End doxygen group hipGetDevice.
+ * @}
+ */
 
 TEST_CASE("Unit_hipDeviceGet_Negative") {
   // TODO enable after EXSWCPHIPT-104 is fixed

@@ -19,7 +19,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-// Test the device info API extensions for HIP
 
 #include <string.h>
 #ifdef __linux__
@@ -30,6 +29,14 @@ THE SOFTWARE.
 #include <iostream>
 
 #include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipDeviceGetAttribute hipDeviceGetAttribute
+ * @{
+ * @ingroup DeviceTest
+ * `hipDeviceGetAttribute(int* pi, hipDeviceAttribute_t attr, int deviceId)` -
+ * Query for a specific device attribute.
+ */
 
 static hipError_t test_hipDeviceGetAttribute(int deviceId,
                                       hipDeviceAttribute_t attr,
@@ -67,6 +74,18 @@ static hipError_t test_hipDeviceGetHdpAddress(int deviceId,
   return hipSuccess;
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate various device attributes against device properties.
+ *  - Matching attribute and property value shall be equal.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetDeviceAttribute_CheckAttrValues") {
   int deviceId;
   HIP_CHECK(hipGetDevice(&deviceId));
@@ -236,7 +255,7 @@ TEST_CASE("Unit_hipGetDeviceAttribute_CheckAttrValues") {
                                     props.texturePitchAlignment));
 }
 
-/**
+/*
  * Validate the hipDeviceAttributeFineGrainSupport property in AMD.
  */
 #ifdef __linux__
@@ -265,7 +284,19 @@ static bool isRocmPathSet() {
   return false;
 }
 
-// This is AMD specific property test
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate fine grain support attribute against
+ *    known values for different AMD architectures
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetDeviceAttribute_CheckFineGrainSupport") {
   int deviceId;
   int deviceCount = 0;
@@ -327,12 +358,25 @@ TEST_CASE("Unit_hipGetDeviceAttribute_CheckFineGrainSupport") {
 }
 #endif
 #endif
+
 /**
- * Validates negative scenarios for hipDeviceGetAttribute
- * scenario1: pi = nullptr
- * scenario2: device = -1 (Invalid Device)
- * scenario3: device = Non Existing Device
- * scenario4: attr = Invalid Attribute
+ * Test Description
+ * ------------------------
+ *  - Validates negative scenarios:
+ *    -# When pointer to value is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When device ID is `-1`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When device ID is out of bounds
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When attribute is invalid (-1)
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetAttribute_NegTst") {
   int deviceCount = 0;
@@ -527,6 +571,17 @@ template <size_t n> void printAttributes(const AttributeToStringMap<n>& attribut
   std::flush(std::cout);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Print out all device attributes in agreed upon format.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Print_Out_Attributes") {
   const auto device = GENERATE(range(0, HipTest::getDeviceCount()));
   hipDeviceProp_t properties;

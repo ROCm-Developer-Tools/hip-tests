@@ -20,13 +20,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Test for checking the functionality of
- * hipError_t hipDeviceSynchronize();
- */
-
-
 #include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipDeviceSynchronize hipDeviceSynchronize
+ * @{
+ * @ingroup DeviceTest
+ * `hipDeviceSynchronize(void)` -
+ * Waits on all active streams on current device.
+ * When this command is invoked, the host thread gets blocked until all the commands associated
+ * with streams associated with the device. HIP does not support multiple blocking modes (yet!).
+ */
 
 #define _SIZE sizeof(int) * 1024 * 1024
 #define NUM_STREAMS 2
@@ -44,6 +48,18 @@ static __global__ void Iter(int* Ad, int num) {
     }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs synchronization when no work is enqueued on stream,
+ *    utilizing multiple devices.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceSynchronize_Positive_Empty_Streams") {
   const auto device = GENERATE(range(0, HipTest::getDeviceCount()));
   HIP_CHECK(hipSetDevice(device));
@@ -55,6 +71,18 @@ TEST_CASE("Unit_hipDeviceSynchronize_Positive_Empty_Streams") {
   HIP_CHECK(hipStreamDestroy(stream));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs synchronization between large kernel execution
+ *    and asynchronous copying of the array, on default(null) stream.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceSynchronize_Positive_Nullstream") {
   const auto device = GENERATE(range(0, HipTest::getDeviceCount()));
   HIP_CHECK(hipSetDevice(device));
@@ -74,6 +102,18 @@ TEST_CASE("Unit_hipDeviceSynchronize_Positive_Nullstream") {
   CHECK(1 << 30 == A_h[0] - 1);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs synchronization between large kernel execution
+ *    and asynchronous copying of the array, on multiple streams.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceSynchronize_Functional") {
   int* A[NUM_STREAMS];
   int* Ad[NUM_STREAMS];

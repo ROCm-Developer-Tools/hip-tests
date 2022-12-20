@@ -17,12 +17,6 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- 1)Testcase verifies the hipIpcMemAccess APIs by creating memory handle
-in parent process and access it in child process.
- 2)Test case performs Parameter validation of hipIpcMemAccess APIs.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 
@@ -34,6 +28,14 @@ in parent process and access it in child process.
 #include <semaphore.h>
 #include <unistd.h>
 
+/**
+ * @addtogroup hipIpcOpenMemHandle hipIpcOpenMemHandle
+ * @{
+ * @ingroup DeviceTest
+ * `hipIpcOpenMemHandle(void** devPtr, hipIpcMemHandle_t handle, unsigned int flags)` -
+ * Opens an interprocess memory handle exported from another process 
+ * and returns a device pointer usable in the local process.
+ */
 
 #define NUM_ELMTS 1024
 #define NUM_THREADS 10
@@ -58,6 +60,23 @@ typedef struct mem_handle {
 // and check for data consistencies and close the hipIpcCloseMemHandle
 // release the parent and wait for parent to release itself(child)
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies that getting and opening mem handle works correctly
+ *    in specific scenarion, and handles the case when the same device
+ *    is used in both processes.
+ *  - Creates memory from the parent process for each device.
+ *  - Spawns child process and waits for it to finish.
+ *  - Child process gets the handle and check data consistencies.
+ * Test source
+ * ------------------------
+ *  - unit/multiproc/hipIpcMemAccessTest.cc
+ * Test requirements
+ * ------------------------
+ *  - Host specific (LINUX)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipIpcMemAccess_Semaphores") {
   hip_ipc_t *shrd_mem = NULL;
   pid_t pid;
@@ -161,6 +180,39 @@ TEST_CASE("Unit_hipIpcMemAccess_Semaphores") {
   REQUIRE(shrd_mem->IfTestPassed == true);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of valid and invalid arguments for
+ *    [hipIpcGetMemHandle](@ref hipIpcGetMemHandle):
+ *    -# When memory handle pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When both pointers are `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When both pointers are valid
+ *      - Expected output: return `hipSuccess`
+ *  - Validates handling of valid and invalid arguments for
+ *    [hipIpcOpenMemHandle](@ref hipIpcOpenMemHandle):
+ *    -# When device pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When memory handle pointer uninitialized
+ *      - Expected output: return `hipErrorInvalidValue` or `hipErrorInvalidDevicePointer`
+ *    -# When memory handle has random flags
+ *      - Expected output: return `hipErrorInvalidValue`
+ *  - Validates handling of valid and invalid arguments for
+ *    [hipIpcCloseMemHandle](@ref hipIpcCloseMemHandle):
+ *    -# When device pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/multiproc/hipIpcMemAccessTest.cc
+ * Test requirements
+ * ------------------------
+ *  - Host specific (LINUX)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipIpcMemAccess_ParameterValidation") {
   hipIpcMemHandle_t MemHandle;
   hipIpcMemHandle_t MemHandleUninit;

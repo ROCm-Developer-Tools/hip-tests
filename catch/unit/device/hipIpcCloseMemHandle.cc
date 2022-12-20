@@ -27,6 +27,32 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <hip/hip_runtime_api.h>
 
+/**
+ * @addtogroup hipIpcCloseMemHandle hipIpcCloseMemHandle
+ * @{
+ * @ingroup DeviceTest
+ * `hipIpcCloseMemHandle(void* devPtr)` -
+ * Close memory mapped with hipIpcOpenMemHandle.
+ * Unmaps memory returned by hipIpcOpenMemHandle.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipIpcMemAccess_Semaphores
+ *  - @ref Unit_hipIpcMemAccess_ParameterValidation
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that memory stays mapped if reference count doesn't reach zero.
+ *  - Checks that memory stays mapped if handle is closed in second process.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipIpcCloseMemHandle.cc
+ * Test requirements
+ * ------------------------
+ *  - Host specific (LINUX)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipIpcCloseMemHandle_Positive_Reference_Counting") {
   int fd[2];
   REQUIRE(pipe(fd) == 0);
@@ -80,6 +106,18 @@ TEST_CASE("Unit_hipIpcCloseMemHandle_Positive_Reference_Counting") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Closes the memory handle from the process that has created it.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipIpcCloseMemHandle.cc
+ * Test requirements
+ * ------------------------
+ *  - Host specific (LINUX)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipIpcCloseMemHandle_Negative_Close_In_Originating_Process") {
   void* ptr;
   hipIpcMemHandle_t handle;

@@ -17,11 +17,15 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Conformance test for checking functionality of
- * hipError_t hipDeviceSetLimit ( enum hipLimit_t limit, size_t value );
- */
 #include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipDeviceSetLimit hipDeviceSetLimit
+ * @{
+ * @ingroup DeviceTest
+ * `hipDeviceSetLimit(enum hipLimit_t limit, size_t value)` -
+ * Set Resource limits of current device.
+ */
 
 // Currently the HIGHER_VALUE is fixed to 16 KB based on currently
 // set maximum value for hipLimitStackSize. In future, this value
@@ -51,17 +55,15 @@ static bool testSetLimitFunc(hipLimit_t limit_to_test) {
 }
 
 /**
- * hipDeviceSetLimit tests =>
- *
- * Scenario1: Single device Set-Get test for hipLimitStackSize flag.
- *
- * Scenario2: Single device Set-Get test for hipLimitPrintfFifoSize flag.
- *
- * Scenario3: Single device Set-Get test for hipLimitMallocHeapSize flag.
- *
- * Scenario4: Multidevice Set-Get test for all the flags
- *
- * Scenario5: Negative Scenario - Invalid flag value
+ * Test Description
+ * ------------------------
+ *  - Sets different values for the resource limits.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceSetLimit.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceSetLimit_SetGet") {
   size_t value = 0;

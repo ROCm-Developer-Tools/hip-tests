@@ -22,6 +22,30 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <hip/hip_runtime_api.h>
 
+/**
+ * @addtogroup hipDeviceReset hipDeviceReset
+ * @{
+ * @ingroup DeviceTest
+ * `hipDeviceReset(void)` -
+ * The state of current device is discarded and updated to a fresh state.
+ *
+ * Calling this function deletes all streams created, memory allocated, kernels running, events
+ * created. Make sure that no other thread is using the device or streams, memory, kernels, events
+ * associated with the current device.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that device reset frees allocated memory and
+ *    reverts modified flags and configs to its default values.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceReset.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceReset_Positive_Basic") {
   const auto device = GENERATE(range(0, HipTest::getDeviceCount()));
   HIP_CHECK(hipSetDevice(device));
@@ -74,6 +98,19 @@ TEST_CASE("Unit_hipDeviceReset_Positive_Basic") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Resets device from another thread
+ *  - Validates that device reset frees allocated memory from the main
+ *    thread, and reverts modified flags and configs to its default values.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceReset.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceReset_Positive_Threaded") {
   HIP_CHECK(hipSetDevice(0));
   INFO("Current device is: " << 0);

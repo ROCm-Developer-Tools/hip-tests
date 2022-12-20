@@ -157,9 +157,7 @@ static __global__ void ker_vec_sub(int *A, int *B) {
   A[i] = A[i] - B[i];
 }
 
-/**
- Internal class for creating nested graphs.
- */
+// Internal class for creating nested graphs.
 class GraphKernelNodeGetSetParam {
   const int N = 1024;
   size_t Nbytes;

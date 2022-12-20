@@ -17,34 +17,59 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Conformance test for checking functionality of
- * hipError_t hipDeviceGetLimit(size_t* pValue, enum hipLimit_t limit);
- */
-#include <hip_test_common.hh>
 /**
- * hipDeviceGetLimit tests
- * Scenario1: Validates if pValue = nullptr returns hip error code.
- * Scenario2: Validates if *pValue > 0 is returned for limit = hipLimitMallocHeapSize.
- * Scenario3: Validates if error code is returned for limit = Invalid Flag = 0xff.
+ * @addtogroup hipDeviceGetLimit hipDeviceGetLimit
+ * @{
+ * @ingroup DeviceTest
+ * `hipDeviceGetLimit(size_t* pValue, enum hipLimit_t limit)` -
+ * Get Resource limits of current device.
+ */
+
+#include <hip_test_common.hh>
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the limit value is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When limit enum is out of bounds
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetLimit.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetLimit_NegTst") {
   size_t Value = 0;
-  // Scenario1
+
   SECTION("NULL check") {
     REQUIRE_FALSE(hipDeviceGetLimit(nullptr, hipLimitMallocHeapSize)
                   == hipSuccess);
   }
-  // Scenario3
+
   SECTION("Invalid Input Flag") {
     REQUIRE_FALSE(hipDeviceGetLimit(&Value, static_cast<hipLimit_t>(0xff)) ==
                   hipSuccess);
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that returned limit value for Malloc Heap size is valid.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetLimit.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceGetLimit_CheckValidityOfOutputVal") {
   size_t Value = 0;
-  // Scenario2
+
   REQUIRE(hipDeviceGetLimit(&Value, hipLimitMallocHeapSize) ==
           hipSuccess);
   REQUIRE_FALSE(Value <= 0);

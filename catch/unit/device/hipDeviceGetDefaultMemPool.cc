@@ -23,6 +23,25 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <hip/hip_runtime_api.h>
 
+/**
+ * @addtogroup hipDeviceGetDefaultMemPool hipDeviceGetDefaultMemPool
+ * @{
+ * @ingroup DeviceTest
+ * `hipDeviceGetDefaultMemPool(hipMemPool_t* mem_pool, int device)` -
+ * Returns the default memory pool of the specified device
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Check that MemPool can be fetched and is not `nullptr`.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetDefaultMemPool.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceGetDefaultMemPool_Positive_Basic") {
   const int device = GENERATE(range(0, HipTest::getDeviceCount()));
 
@@ -39,6 +58,23 @@ TEST_CASE("Unit_hipDeviceGetDefaultMemPool_Positive_Basic") {
   REQUIRE(mem_pool != nullptr);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the MemPool is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device ID is equal to -1
+ *      - Expected output: return 'hipErrorInvalidDevice'
+ *    -# When device ID is out of bounds
+ *      - Expected output: return 'hipErrorInvalidDevice'
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetDefaultMemPool.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceGetDefaultMemPool_Negative_Parameters") {
   hipMemPool_t mem_pool;
 

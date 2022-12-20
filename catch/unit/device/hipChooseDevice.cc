@@ -23,8 +23,23 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 
 /**
- * hipChooseDevice tests
- * Scenario: Validates dev id value.
+ * @addtogroup hipChooseDevice hipChooseDevice
+ * @{
+ * @ingroup DeviceTest
+ * `hipChooseDevice(int* device, const hipDeviceProp_t* prop)` -
+ * Device which matches `hipDeviceProp_t` is returned.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate chosen device against gotten device properties.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipChooseDevice.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipChooseDevice_ValidateDevId") {
   hipDeviceProp_t prop;
@@ -36,21 +51,30 @@ TEST_CASE("Unit_hipChooseDevice_ValidateDevId") {
   REQUIRE_FALSE(dev < 0);
   REQUIRE_FALSE(dev >= numDevices);
 }
+
 /**
- * hipChooseDevice tests
- * Scenario1: Validates if dev = nullptr returns error code
- * Scenario2: Validates if prop = nullptr returns error code
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When pointer to the device is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When pointer to the properties is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipChooseDevice.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipChooseDevice_NegTst") {
   hipDeviceProp_t prop;
   int dev = -1;
 
-  // Scenario1
   SECTION("dev is nullptr") {
     REQUIRE_FALSE(hipSuccess == hipChooseDevice(nullptr, &prop));
   }
 
-  // Scenario2
   SECTION("prop is nullptr") {
     REQUIRE_FALSE(hipSuccess == hipChooseDevice(&dev, nullptr));
   }

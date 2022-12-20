@@ -22,40 +22,30 @@ THE SOFTWARE.
 #include <vector>
 #include <mutex>
 #include <condition_variable>
+
 /**
- * Conformance test for checking functionality of
- * hipError_t hipGetDeviceFlags(unsigned int* flags);
- * hipError_t hipSetDeviceFlags(unsigned flags);
- *
- *
- * hipGetDeviceFlags and hipSetDeviceFlags tests.
- * Scenario1: Validates if hipGetDeviceFlags returns hipErrorInvalidValue for flags = nullptr.
- * Scenario2: Validates if hipSetDeviceFlags returns hipErrorInvalidValue for invalid flags.
- * Scenario3: Validates if flags returned by hipGetDeviceFlags are valid.
- * Scenario4: Validates that flags set with hipSetDeviceFlags can be retrieved with
- * hipGetDeviceFlags.
- * Scenario5: Validates that flags set with hipSetDeviceFlags can be retrieved on a seperate thread
- * with hipGetDeviceFlags.
+ * @addtogroup hipGetDeviceFlags hipGetDeviceFlags
+ * @{
+ * @ingroup DeviceTest
+ * `hipGetDeviceFlags(unsigned int* flags)` -
+ * Gets the flags set for current device.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the flag is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetSetDeviceFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGetSetDeviceFlags_NullptrFlag") {
-  // Scenario1
   HIP_CHECK_ERROR(hipGetDeviceFlags(nullptr), hipErrorInvalidValue);
-}
-
-TEST_CASE("Unit_hipGetSetDeviceFlags_InvalidFlag") {
-#if HT_AMD
-  HipTest::HIP_SKIP_TEST("EXSWCPHIPT-115");
-  return;
-#endif
-  // Scenario2
-  const unsigned int invalidFlag = GENERATE(0b011,     // schedule flags should not overlap
-                                            0b101,     // schedule flags should not overlap
-                                            0b110,     // schedule flags should not overlap
-                                            0b111,     // schedule flags should not overlap
-                                            0b100000,  // out of bounds
-                                            0xFFFF);
-  CAPTURE(invalidFlag);
-  HIP_CHECK_ERROR(hipSetDeviceFlags(invalidFlag), hipErrorInvalidValue);
 }
 
 std::array<unsigned int, 16> getValidFlags() {
@@ -78,9 +68,19 @@ std::array<unsigned int, 16> getValidFlags() {
   return validFlags;
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Check returned flags against Cartesian product of all
+ *    possible valid flag combinations.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetSetDeviceFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetSetDeviceFlags_ValidFlag") {
-  // Scenario3
   auto validFlags = getValidFlags();
 
   unsigned int flag = 0;
@@ -88,8 +88,20 @@ TEST_CASE("Unit_hipGetSetDeviceFlags_ValidFlag") {
   REQUIRE(std::find(std::begin(validFlags), std::end(validFlags), flag) != std::end(validFlags));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that returned flags are equal to the ones that have
+ *    been previously set.
+ *  - Perform validation for all connected devices and all flag combinations.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetSetDeviceFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetSetDeviceFlags_SetThenGet") {
-  // Scenario4
   auto validFlags = getValidFlags();
 
   auto devNo = GENERATE(range(0, HipTest::getDeviceCount()));
@@ -108,8 +120,19 @@ TEST_CASE("Unit_hipGetSetDeviceFlags_SetThenGet") {
   REQUIRE((flag & hipDeviceScheduleMask) == getFlag);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that the returned flags from the main thread are
+ *    equal to the flags that are set from another thread.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetSetDeviceFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetSetDeviceFlags_Threaded") {
-  // Scenario5
   auto validFlags = getValidFlags();
 
   auto devNo = GENERATE(range(0, HipTest::getDeviceCount()));
@@ -146,6 +169,19 @@ TEST_CASE("Unit_hipGetSetDeviceFlags_Threaded") {
   HIP_CHECK_THREAD_FINALIZE();
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Create context with flags and validate that valid
+ *    flags are returned.
+ *  - Perform validation for all connected devices and all flag combinations.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetSetDeviceFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetDeviceFlags_Positive_Context") {
   auto validFlags = getValidFlags();
   const unsigned int flags =
@@ -163,4 +199,50 @@ TEST_CASE("Unit_hipGetDeviceFlags_Positive_Context") {
 
   HIP_CHECK(hipCtxPopCurrent(&ctx));
   HIP_CHECK(hipCtxDestroy(ctx));
+}
+
+/**
+ * End doxygen group hipGetDeviceFlags.
+ * @}
+ */
+
+/**
+ * @addtogroup hipSetDeviceFlags hipSetDeviceFlags
+ * @{
+ * @ingroup DeviceTest
+ * `hipSetDeviceFlags(unsigned flags)` -
+ * The current device behavior is changed according the flags passed.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipGetSetDeviceFlags_SetThenGet
+ *  - @ref Unit_hipGetSetDeviceFlags_Threaded
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When flag combinations are invalid
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetSetDeviceFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipGetSetDeviceFlags_InvalidFlag") {
+#if HT_AMD
+  HipTest::HIP_SKIP_TEST("EXSWCPHIPT-115");
+  return;
+#endif
+  const unsigned int invalidFlag = GENERATE(0b011,     // schedule flags should not overlap
+                                            0b101,     // schedule flags should not overlap
+                                            0b110,     // schedule flags should not overlap
+                                            0b111,     // schedule flags should not overlap
+                                            0b100000,  // out of bounds
+                                            0xFFFF);
+  CAPTURE(invalidFlag);
+  HIP_CHECK_ERROR(hipSetDeviceFlags(invalidFlag), hipErrorInvalidValue);
 }

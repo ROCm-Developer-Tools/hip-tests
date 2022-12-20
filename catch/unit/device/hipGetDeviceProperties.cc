@@ -22,6 +22,13 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipGetDeviceProperties hipGetDeviceProperties
+ * @{
+ * @ingroup DeviceTest
+ * `hipGetDeviceProperties(hipDeviceProp_t* prop, int deviceId)` -
+ * Returns device properties.
+ */
 
 #define NUM_OF_ARCHPROP 17
 #define HIP_ARCH_HAS_GLOBAL_INT32_ATOMICS_IDX     0
@@ -66,7 +73,7 @@ __global__ void mykernel(int *archProp_d) {
   getArchValuesFromDevice(archProp_d);
 }
 
-/**
+/*
  * Internal Functions
  */
 static void validateDeviceMacro(int *archProp_h, hipDeviceProp_t *prop) {
@@ -121,7 +128,7 @@ static void validateDeviceMacro(int *archProp_h, hipDeviceProp_t *prop) {
   CHECK_FALSE(prop->arch.hasDynamicParallelism !=
       archProp_h[HIP_ARCH_HAS_DYNAMIC_PARALLEL_IDX]);
 }
-/**
+/*
  * Validates value of __HIP_ARCH_*  with deviceProp.arch.has* as follows
  * __HIP_ARCH_HAS_GLOBAL_INT32_ATOMICS__ == hasGlobalInt32Atomics
  * __HIP_ARCH_HAS_GLOBAL_FLOAT_ATOMIC_EXCH__ == hasGlobalFloatAtomicExch
@@ -142,6 +149,18 @@ static void validateDeviceMacro(int *archProp_h, hipDeviceProp_t *prop) {
  * __HIP_ARCH_HAS_DYNAMIC_PARALLEL__ == hasDynamicParallelism
  */
 #if HT_AMD
+/**
+ * Test Description
+ * ------------------------
+ *  - Compare some device properties against properties derived from device code.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceProperties.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetDeviceProperties_ArchPropertiesTst") {
   int *archProp_h, *archProp_d;
   archProp_h = new int[NUM_OF_ARCHPROP];
@@ -174,11 +193,23 @@ TEST_CASE("Unit_hipGetDeviceProperties_ArchPropertiesTst") {
   delete[] archProp_h;
 }
 #endif
+
 /**
- * Validates negative scenarios for hipGetDeviceProperties
- * scenario1: props = nullptr
- * scenario2: device = -1 (Invalid Device)
- * scenario3: device = Non Existing Device
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the properties is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the device ID is equal to -1
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the device ID is out of bounds
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceProperties.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGetDeviceProperties_NegTst") {
   hipDeviceProp_t prop;
@@ -201,6 +232,17 @@ TEST_CASE("Unit_hipGetDeviceProperties_NegTst") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Print out all properties in agreed upon format.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceProperties.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Print_Out_Properties") {
   constexpr int w = 42;
   const auto device = GENERATE(range(0, HipTest::getDeviceCount()));

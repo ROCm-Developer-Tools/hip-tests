@@ -28,6 +28,30 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <hip/hip_runtime_api.h>
 
+/**
+ * @addtogroup hipIpcOpenMemHandle hipIpcOpenMemHandle
+ * @{
+ * @ingroup DeviceTest
+ * `hipIpcOpenMemHandle(void** devPtr, hipIpcMemHandle_t handle, unsigned int flags)` -
+ * Opens an interprocess memory handle exported from another process 
+ * and returns a device pointer usable in the local process.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Handle the attempt to open memory handle in the same process
+ *    that has created it.
+ *      -# When the process is the same
+ *        - Expected output: return `hipErrorInvalidContext`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipIpcOpenMemHandle.cc
+ * Test requirements
+ * ------------------------
+ *  - Host specific (LINUX)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipIpcOpenMemHandle_Negative_Open_In_Creating_Process") {
   hipDeviceptr_t ptr1, ptr2;
   hipIpcMemHandle_t handle;
@@ -39,6 +63,21 @@ TEST_CASE("Unit_hipIpcOpenMemHandle_Negative_Open_In_Creating_Process") {
   HIP_CHECK(hipFree(reinterpret_cast<void*>(ptr1)));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that opening the same memory handle from a different context
+ *    returns error
+ *    -# When different context
+ *      - Expected output: return `hipErrorInvalidResourceHandle`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipIpcOpenMemHandle.cc
+ * Test requirements
+ * ------------------------
+ *  - Host specific (LINUX)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipIpcOpenMemHandle_Negative_Open_In_Two_Contexts_Same_Device") {
   int fd[2];
   REQUIRE(pipe(fd) == 0);

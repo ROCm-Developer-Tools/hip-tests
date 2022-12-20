@@ -23,7 +23,28 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <hip/hip_runtime_api.h>
 
-#if __linux__ && HT_AMD
+/**
+ * @addtogroup hipExtGetLinkTypeAndHopCount hipExtGetLinkTypeAndHopCount
+ * @{
+ * @ingroup DeviceTest
+ * `hipExtGetLinkTypeAndHopCount(int device1, int device2, uint32_t* linktype, uint32_t* hopcount)` -
+ * Returns the link type and hop count between two devices.
+ */
+
+#if __linux__
+#if HT_AMD
+/**
+ * Test Description
+ * ------------------------
+ *  - Check commutativity of devices for every device combination.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipExtGetLinkTypeAndHopCount.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipExtGetLinkTypeAndHopCount_Positive_Basic") {
   const auto device1 = GENERATE(range(0, HipTest::getDeviceCount()));
   const auto device2 = GENERATE(range(0, HipTest::getDeviceCount()));
@@ -44,6 +65,38 @@ TEST_CASE("Unit_hipExtGetLinkTypeAndHopCount_Positive_Basic") {
   REQUIRE(link_type1 == link_type2);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When creating the link between the same device
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device ordinance for the first device is out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When device ordinance for the second device is out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When device ordinance for both devices is out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When device ordinance for the first device is < 0
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device ordinance for the second device is < 0
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device ordinance for both devices is < 0
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the link type is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the hop count is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When both pointers are `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipExtGetLinkTypeAndHopCount.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipExtGetLinkTypeAndHopCount_Negative_Parameters") {
   uint32_t link_type, hop_count;
   SECTION("same device") {
@@ -97,4 +150,5 @@ TEST_CASE("Unit_hipExtGetLinkTypeAndHopCount_Negative_Parameters") {
     HIP_CHECK_ERROR(hipExtGetLinkTypeAndHopCount(0, 1, nullptr, nullptr), hipErrorInvalidValue);
   }
 }
+#endif
 #endif

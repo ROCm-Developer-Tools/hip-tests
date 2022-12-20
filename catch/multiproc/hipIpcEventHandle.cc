@@ -17,23 +17,6 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-
-Testcase Scenarios
-------------------
-Functional:
-1) Validate usecase of Event handle along with memory handle across multiple
-processes with complex scenario.
-
-Negative/Argument Validation:
-1) Get event handle with eventHandle(nullptr).
-2) Get event handle with event(nullptr).
-3) Get event handle with invalid event object.
-4) Get event handle for event allocated without Interprocess flag.
-5) Open event handle with event(nullptr).
-6) Open event handle with eventHandle as invalid.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 
@@ -42,6 +25,14 @@ Negative/Argument Validation:
 #include <sys/wait.h>
 #include <unistd.h>
 
+/**
+ * @addtogroup hipIpcGetEventHandle hipIpcGetEventHandle
+ * @{
+ * @ingroup DeviceTest
+ * `hipIpcGetEventHandle(hipIpcEventHandle_t* handle, hipEvent_t event)` -
+ * Gets an opaque interprocess handle for an event.
+ * This opaque handle may be copied into other processes and opened with hipIpcOpenEventHandle.
+ */
 
 #define BUF_SIZE        4096
 #define MAX_DEVICES     16
@@ -65,7 +56,7 @@ typedef struct ipcBarrier {
   bool allExit;
 } ipcBarrier_t;
 
-/**
+/*
   Get device count and list down devices with
   P2P access with Device 0.
 */
@@ -118,7 +109,7 @@ static ipcBarrier_t *g_Barrier{};
 static bool g_procSense;
 static int g_processCnt;
 
-/**
+/*
  Calling process waits for other processes to signal/complete.
 */
 void processBarrier() {
@@ -147,7 +138,7 @@ __global__ void computeKernel(int *dst, int *src, int num) {
     dst[idx] = src[idx] / num;
 }
 
-/**
+/*
  * 1) Process 0 allocates buffer in GPU0 memory and exports the memory handle.
  * 2) Other processes opens memory handle of GPU0 memory, performs computation
  * and records event.
@@ -235,8 +226,19 @@ void runMultiProcKernel(ipcEventInfo_t *shmEventInfo, int index) {
 }
 
 /**
- Functional test demonstrating IPC event usage along with IPC memory handle
-*/
+ * Test Description
+ * ------------------------
+ *  - Validate use case of event handle along with memory handle
+ *    across multiple processes with complex scenario.
+ *  - Utilizes synchronization of processes and events.
+ *  - Lauches kernels and validates computation results.
+ * Test source
+ * ------------------------
+ *  - unit/multiproc/hipIpcEventHandle.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipIpcEventHandle_Functional") {
   ipcDevices_t *shmDevices;
   ipcEventInfo_t *shmEventInfo;
@@ -300,8 +302,38 @@ TEST_CASE("Unit_hipIpcEventHandle_Functional") {
 }
 
 /**
- Performs API Parameter validation.
-*/
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments for
+ *    [hipIpcGetEventHandle](@ref hipIpcGetEventHandle):
+ *    -# When pointer to the event handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the event is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When both pointers are `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When event is not valid
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When event is created without interprocess flag
+ *      - Expected output: return `hipErrorInvalidResourceHandle` or `hipErrorInvalidConfiguration`
+ *    -# When event is created without flags
+ *      - Expected output: return `hipErrorInvalidResourceHandle`
+ *  - Validates handling of invalid arguments for
+ *    [hipIpcOpenEventHandle](@ref hipIpcOpenEventHandle)
+ *    -# When pointer to the event is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the event handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When attemted to open handle in the process that created it
+ *      - Expected output: return `hipErrorInvalidContext`
+ * Test source
+ * ------------------------
+ *  - unit/multiproc/hipIpcEventHandle.cc
+ * Test requirements
+ * ------------------------
+ *  - Host specific (LINUX)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipIpcEventHandle_ParameterValidation") {
   hipEvent_t event;
   hipIpcEventHandle_t eventHandle;
@@ -380,5 +412,23 @@ TEST_CASE("Unit_hipIpcEventHandle_ParameterValidation") {
   }
 #endif
 }
+
+/**
+ * End doxygen group hipIpcGetEventHandle.
+ * @}
+ */
+
+/**
+ * @addtogroup hipIpcOpenEventHandle hipIpcOpenEventHandle
+ * @{
+ * @ingroup DeviceTest
+ * `hipIpcOpenEventHandle(hipEvent_t* event, hipIpcEventHandle_t handle)` -
+ * Opens an interprocess event handles.
+ * Opens an interprocess event handle exported from another process with hipIpcGetEventHandle.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipIpcEventHandle_Functional
+ *  - @ref Unit_hipIpcEventHandle_ParameterValidation
+ */
 
 #endif

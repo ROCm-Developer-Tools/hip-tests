@@ -20,23 +20,45 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Conformance test for checking functionality of
- * hipError_t hipGetDeviceCount(int* count);
- */
-
 #include <hip_test_common.hh>
 #include <hip_test_process.hh>
 
 /**
- * hipGetDeviceCount tests
- * Scenario: Validates if &numDevices = nullptr returns error code.
+ * @addtogroup hipGetDeviceCount hipGetDeviceCount
+ * @{
+ * @ingroup DeviceTest
+ * `hipGetDeviceCount(int* count)` -
+ * Return number of compute-capable devices.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Passes invalid pointer as output parameter for device count - `nullptr`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceCount.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGetDeviceCount_NegTst") {
-  // Scenario1
   REQUIRE_FALSE(hipGetDeviceCount(nullptr) == hipSuccess);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates correct functionality when the device visibility
+ *    environment variables are set. Uses unit/device/hipDeviceCount_exe.cc
+ *    to set visibility.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceCount.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetDeviceCount_HideDevices") {
   int deviceCount = HipTest::getDeviceCount();
   if (deviceCount < 2) {
@@ -59,6 +81,17 @@ TEST_CASE("Unit_hipGetDeviceCount_HideDevices") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Prints device count to the standard output.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipGetDeviceCount.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Print_Out_Device_Count") {
   std::cout << "Device Count: " << HipTest::getDeviceCount() << std::endl;
 }
