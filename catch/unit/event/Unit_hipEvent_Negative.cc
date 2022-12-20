@@ -31,31 +31,71 @@ Unit_hipEventCreate_IncompatibleFlags - Test unsuccessful event creation when in
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipEventCreate hipEventCreate
+ * @{
+ * @ingroup EventTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the event is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEvent_Negative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventCreate_NullCheck") {
   auto res = hipEventCreate(nullptr);
   REQUIRE(res != hipSuccess);
 }
+/**
+ * End doxygen group hipEventCreate.
+ * @}
+ */
 
+/**
+ * @addtogroup hipEventCreateWithFlags hipEventCreateWithFlags
+ * @{
+ * @ingroup EventTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of `nullptr` arguments:
+ *    -# When output pointer to the event is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEvent_Negative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventCreateWithFlags_NullCheck") {
   auto res = hipEventCreateWithFlags(nullptr, 0);
   REQUIRE(res != hipSuccess);
 }
 
-TEST_CASE("Unit_hipEventSynchronize_NullCheck") {
-  auto res = hipEventSynchronize(nullptr);
-  REQUIRE(res != hipSuccess);
-}
-
-TEST_CASE("Unit_hipEventQuery_NullCheck") {
-  auto res = hipEventQuery(nullptr);
-  REQUIRE(res != hipSuccess);
-}
-
-TEST_CASE("Unit_hipEventDestroy_NullCheck") {
-  auto res = hipEventDestroy(nullptr);
-  REQUIRE(res != hipSuccess);
-}
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of incompatible flags:
+ *    -# When the flags are not supported on the device
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEvent_Negative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventCreate_IncompatibleFlags") {
   hipEvent_t event;
   HIP_CHECK_ERROR(hipEventCreateWithFlags(&event, hipEventInterprocess), hipErrorInvalidValue);
@@ -79,4 +119,88 @@ TEST_CASE("Unit_hipEventCreate_IncompatibleFlags") {
 
   unsigned invalidFlag{0x08000000};
   HIP_CHECK_ERROR(hipEventCreateWithFlags(&event, invalidFlag), hipErrorInvalidValue);
+}
+/**
+ * End doxygen group hipEventCreateWithFlags.
+ * @}
+ */
+
+/**
+ * @addtogroup hipEventSynchronize hipEventSynchronize
+ * @{
+ * @ingroup EventTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When event is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEvent_Negative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipEventSynchronize_NullCheck") {
+  auto res = hipEventSynchronize(nullptr);
+  REQUIRE(res != hipSuccess);
+}
+/**
+ * End doxygen group hipEventSynchronize.
+ * @}
+ */
+
+/**
+ * @addtogroup hipEventQuery hipEventQuery
+ * @{
+ * @ingroup EventTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When event is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEvent_Negative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipEventQuery_NullCheck") {
+  auto res = hipEventQuery(nullptr);
+  REQUIRE(res != hipSuccess);
+}
+/**
+ * End doxygen group hipEventQuery.
+ * @}
+ */
+
+/**
+ * @addtogroup hipEventDestroy hipEventDestroy
+ * @{
+ * @ingroup EventTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When event is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEvent_Negative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipEventDestroy_NullCheck") {
+  auto res = hipEventDestroy(nullptr);
+  REQUIRE(res != hipSuccess);
 }

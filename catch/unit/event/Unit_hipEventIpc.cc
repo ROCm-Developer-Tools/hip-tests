@@ -27,7 +27,23 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipEventCreateWithFlags hipEventCreateWithFlags
+ * @{
+ * @ingroup EventTest
+ */
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate Event Management APIs when working with multiple processes.
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEventIpc.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventIpc") {
     size_t N = 4 * 1024 * 1024;
     unsigned threadsPerBlock = 256;

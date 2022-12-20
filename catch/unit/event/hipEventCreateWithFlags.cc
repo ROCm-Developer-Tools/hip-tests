@@ -19,13 +19,28 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/*
-Testcase Scenarios :
-Unit_hipEventCreateWithFlags_Positive - Test simple event creation with hipEventCreateWithFlags api for each flag
-*/
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipEventCreateWithFlags hipEventCreateWithFlags
+ * @{
+ * @ingroup EventTest
+ * `hipEventCreateWithFlags(hipEvent_t* event, unsigned flags)` -
+ * Create an event with the specified flags to control event behaviour.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Successfully create an event with all defined device flags.
+ * Test source
+ * ------------------------
+ *  - unit/event/hipEventCreateWithFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventCreateWithFlags_Positive") {
 
 #if HT_AMD

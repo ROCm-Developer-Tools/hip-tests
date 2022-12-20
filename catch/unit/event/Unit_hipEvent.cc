@@ -26,6 +26,12 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipEventRecord hipEventRecord
+ * @{
+ * @ingroup EventTest
+ */
+
 int tests = -1;
 enum SyncMode {
     syncNone,
@@ -183,7 +189,19 @@ void runTests(int64_t numElements) {
     HIP_CHECK(hipHostFree(C_h));
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Complex test case used to create a lot of events.
+ *  - Each event is enqueued to the stream.
+ *  - Kernels are launched and synchronized.
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEvent.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEvent") {
   runTests(10000000);
 }

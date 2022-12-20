@@ -19,16 +19,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/*
-Testcase Scenarios :
-Unit_hipEventSynchronize_Default_Positive- Test synchronization of an event that is completed after a simple kernel launch (on null/created stream)
-Unit_hipEventSynchronize_NoEventRecord_Positive - Test synchronization of an event that has not been recorded
-*/
 
 #include <hip_test_common.hh>
-
 #include <kernels.hh>
 #include <hip_test_checkers.hh>
+
+/**
+ * @addtogroup hipEventSynchronize hipEventSynchronize
+ * @{
+ * @ingroup EventTest
+ * `hipEventSynchronize(hipEvent_t event)` -
+ * Wait for an event to complete.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipEventIpc
+ *  - @ref Unit_hipEventMGpuMThreads_1
+ *  - @ref Unit_hipEventMGpuMThreads_2
+ *  - @ref Unit_hipEventMGpuMThreads_3
+ */
 
 void testSynchronize(hipStream_t stream) {
 
@@ -70,6 +78,17 @@ void testSynchronize(hipStream_t stream) {
   HipTest::freeArrays(A_d, B_d, C_d, A_h, B_h, C_h, false);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Synchronization of an event that is completed after a simple kernel launch (on null/created stream).
+ * Test source
+ * ------------------------
+ *  - unit/event/hipEventSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventSynchronize_Default_Positive") {
   hipStream_t stream{nullptr};
 
@@ -84,6 +103,17 @@ TEST_CASE("Unit_hipEventSynchronize_Default_Positive") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Synchronization of an event that has not been recorded.
+ * Test source
+ * ------------------------
+ *  - unit/event/hipEventSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventSynchronize_NoEventRecord_Positive") {
   constexpr size_t N = 1024;
 

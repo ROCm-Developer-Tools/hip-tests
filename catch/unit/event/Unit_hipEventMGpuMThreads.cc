@@ -22,6 +22,12 @@
 #include <ratio>
 #include <chrono>
 
+/**
+ * @addtogroup hipEventCreate hipEventCreate
+ * @{
+ * @ingroup EventTest
+ */
+
 int64_t timeNanos() {
   using namespace std::chrono;
   static auto t0 = steady_clock::now();
@@ -187,10 +193,32 @@ void testEventMGpuMThreads(int nThreads = 1) {
   delete []threads;
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate Event Management APIs when working with one thread.
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEventMGpuMThreads.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventMGpuMThreads_1") {
   testEventMGpuMThreads(1);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate Event Management APIs when working with at least two threads.
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEventMGpuMThreads.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventMGpuMThreads_2") {
   int numDevices = 0;
   HIP_CHECK(hipGetDeviceCount(&numDevices));
@@ -201,6 +229,17 @@ TEST_CASE("Unit_hipEventMGpuMThreads_2") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate Event Management APIs when working with at least three threads.
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEventMGpuMThreads.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventMGpuMThreads_3") {
   int numDevices = 0;
   HIP_CHECK(hipGetDeviceCount(&numDevices));

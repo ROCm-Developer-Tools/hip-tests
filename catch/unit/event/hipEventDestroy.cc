@@ -26,12 +26,23 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include "hip/hip_runtime_api.h"
 
+/**
+ * @addtogroup hipEventDestroy hipEventDestroy
+ * @{
+ * @ingroup EventTest
+ * `hipEventDestroy(hipEvent_t event)` -
+ * Destroy the specified event.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipEventIpc
+ */
+
 #if HT_AMD /* Disabled because frequency based wait is timing out on nvidia platforms */
 
 static constexpr size_t vectorSize{1024};
 
-/**
- * @brief Launches vectorAdd kernel with a delay
+/*
+ * Launches vectorAdd kernel with a delay
  */
 static inline void launchVectorAdd(float*& A_h, float*& B_h, float*& C_h,
                                    std::chrono::milliseconds delay, hipStream_t stream = nullptr) {
@@ -46,10 +57,17 @@ static inline void launchVectorAdd(float*& A_h, float*& B_h, float*& C_h,
   HipTest::vectorADD<<<1, 1, 0, stream>>>(A_d, B_d, C_d, vectorSize);
 }
 
-
 /**
- * @brief Check that destroying an event before the kernel has finished running causes no errors.
- *
+ * Test Description
+ * ------------------------
+ *  - Destroys the event before launched kernel has finished running.
+ * Test source
+ * ------------------------
+ *  - unit/event/hipEventDestroy.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipEventDestroy_Unfinished") {
   hipEvent_t event;
@@ -69,8 +87,16 @@ TEST_CASE("Unit_hipEventDestroy_Unfinished") {
 }
 
 /**
- * @brief Check that destroying an event enqueued to a stream causes no errors.
- *
+ * Test Description
+ * ------------------------
+ *  - Destroys the event that is enqueued into a stream.
+ * Test source
+ * ------------------------
+ *  - unit/event/hipEventDestroy.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipEventDestroy_WithWaitingStream") {
   hipEvent_t event;
@@ -94,6 +120,22 @@ TEST_CASE("Unit_hipEventDestroy_WithWaitingStream") {
   HipTest::freeArraysForHost(A_h, B_h, C_h, true);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the event is `nullptr`
+ *      - Expected output: return `hipErrorInvalidResourceHandle`
+ *    -# When event is destroyed twice
+ *      - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/event/hipEventDestroy.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventDestroy_Negative") {
   SECTION("Invalid Event") {
     hipEvent_t event{nullptr};

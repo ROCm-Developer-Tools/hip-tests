@@ -19,12 +19,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/*
-Testcase Scenarios :
-Unit_hipEventRecord- Test hipEventRecord serialization behavior
-Unit_hipEventRecord_Negative - Test unsuccessful hipEventRecord when event is passed as nullptr
-                             - Test unsuccessful hipEventRecord when event is created/recorded on different devices
-*/
 
 #include <hip_test_common.hh>
 
@@ -32,6 +26,33 @@ Unit_hipEventRecord_Negative - Test unsuccessful hipEventRecord when event is pa
 #include <hip_test_checkers.hh>
 #include <hip_test_context.hh>
 
+/**
+ * @addtogroup hipEventRecord hipEventRecord
+ * @{
+ * @ingroup EventTest
+ * `hipEventRecord(hipEvent_t event, hipStream_t stream = NULL)` -
+ * Record an event in the specified stream.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipEventIpc
+ *  - @ref Unit_hipEventMGpuMThreads_1
+ *  - @ref Unit_hipEventMGpuMThreads_2
+ *  - @ref Unit_hipEventMGpuMThreads_3
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates regular events and events with flags.
+ *  - Enqueues them to the streams and checks if events
+ *    can be successfully used for synchronization.
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEventRecord.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventRecord") {
   constexpr size_t N = 1024;
   constexpr int iterations = 1;
@@ -117,6 +138,21 @@ TEST_CASE("Unit_hipEventRecord") {
   TestContext::get().cleanContext();
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When event is `nullptr`
+ *      - Expected output: return `hipErrorInvalidResourceHandle`
+ *    -# When event is created on one device but recorded on the other one
+ *      - Expected output: return `hipErrorInvalidHandle`
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEventRecord.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventRecord_Negative") {
   SECTION("Nullptr event") {
     HIP_CHECK_ERROR(hipEventRecord(nullptr, nullptr), hipErrorInvalidResourceHandle);

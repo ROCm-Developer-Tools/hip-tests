@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2021 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,34 +20,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include <hip_test_common.hh>
+// Test groups are named based on the group names from hip_api_runtime.h, with adding "Test" suffix
 
 /**
- * @addtogroup hipEventCreate hipEventCreate
+ * @defgroup CallbackTest Callback Activity APIs
  * @{
- * @ingroup EventTest
- * `hipEventCreate(hipEvent_t* event)` -
- * Create an event.
+ * This section describes tests for the callback/Activity of HIP runtime API.
+ * @}
  */
 
 /**
- * Test Description
- * ------------------------
- *  - Successfully creates and event for each device.
- * Test source
- * ------------------------
- *  - unit/event/hipEventCreate.cc
- * Test requirements
- * ------------------------
- *  - HIP_VERSION >= 5.2
+ * @defgroup GraphTest Graph Management
+ * @{
+ * This section describes the graph management types & functions of HIP runtime API.
+ * @}
  */
-TEST_CASE("Unit_hipEventCreate_Positive") {
-  int id = GENERATE(range(0, HipTest::getDeviceCount()));
-  HIP_CHECK(hipSetDevice(id));
 
-  hipEvent_t event;
-  HIP_CHECK(hipEventCreate(&event));
-  REQUIRE(event != nullptr);
-
-  HIP_CHECK(hipEventDestroy(event));
-}
+/**
+ * @defgroup EventTest Event Management
+ * @{
+ * This section describes tests for the event management functions of HIP runtime API.
+ * @}
+ */

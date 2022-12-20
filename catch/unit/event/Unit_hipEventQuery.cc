@@ -19,6 +19,17 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipEventQuery hipEventQuery
+ * @{
+ * @ingroup EventTest
+ * `hipEventQuery(hipEvent_t event)` -
+ * Query the status of the specified event.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipEventIpc
+ */
+
 // Since we can not use atomic*_system on every gpu, we will use wait based on clock rate.
 // This wont be accurate since current clock rate of a GPU varies depending on many variables
 // including thermals, load, utilization etc
@@ -34,6 +45,17 @@ __global__ void waitKernel(int clockRate, int seconds) {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Query events with a single and with multiple devices.
+ * Test source
+ * ------------------------
+ *  - unit/event/Unit_hipEventQuery.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipEventQuery_DifferentDevice") {
   hipEvent_t event1{}, event2{};
   HIP_CHECK(hipEventCreate(&event1));
