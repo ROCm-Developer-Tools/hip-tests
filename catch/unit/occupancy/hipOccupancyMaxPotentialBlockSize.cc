@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -16,65 +16,131 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-#include <hip_test_common.hh>
 
-static __global__ void f1(float *a) { *a = 1.0; }
+#include "occupancy_common.hh"
 
-template <typename T>
-static __global__ void f2(T *a) { *a = 1; }
+/**
+ * @addtogroup hipOccupancyMaxPotentialBlockSize hipOccupancyMaxPotentialBlockSize
+ * @{
+ * @ingroup OccupancyTest
+ * `hipOccupancyMaxPotentialBlockSize(int* gridSize, int* blockSize,
+ * const void* f, size_t dynSharedMemPerBlk, int blockSizeLimit)` -
+ * Determine the grid and block sizes to achieves maximum occupancy for a kernel.
+ */
 
-TEST_CASE("Unit_hipOccupancyMaxPotentialBlockSize_Negative") {
-  hipError_t ret;
-  int blockSize = 0;
-  int gridSize = 0;
+static __global__ void f1(float* a) { *a = 1.0; }
 
-  // Validate each argument
-  ret = hipOccupancyMaxPotentialBlockSize(NULL, &blockSize, f1, 0, 0);
-  REQUIRE(ret != hipSuccess);
+template <typename T> static __global__ void f2(T* a) { *a = 1; }
 
-  ret = hipOccupancyMaxPotentialBlockSize(&gridSize, NULL, f1, 0, 0);
-  REQUIRE(ret != hipSuccess);
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the grid size is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When output pointer to the block size is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the function is `nullptr`
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidDeviceFunction`
+ * Test source
+ * ------------------------
+ *  - unit/occupancy/hipOccupancyMaxPotentialBlockSize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipOccupancyMaxPotentialBlockSize_Negative_Parameters") {
+  // Common negative tests
+  MaxPotentialBlockSizeNegative([](int* gridSize, int* blockSize) {
+    return hipOccupancyMaxPotentialBlockSize(gridSize, blockSize, f1, 0, 0);
+  });
 
-#ifndef __HIP_PLATFORM_NVIDIA__
-  // nvcc doesnt support kernelfunc(NULL) for api
-  ret = hipOccupancyMaxPotentialBlockSize(&gridSize, &blockSize, NULL, 0, 0);
-  REQUIRE(ret != hipSuccess);
+#if HT_AMD
+#if 0 // EXSWHTEC-219
+  SECTION("Kernel function is NULL") {
+    int blockSize = 0;
+    int gridSize = 0;
+    // nvcc doesnt support kernelfunc(NULL) for api
+    HIP_CHECK_ERROR(hipOccupancyMaxPotentialBlockSize(&gridSize, &blockSize, NULL, 0, 0),
+                    hipErrorInvalidDeviceFunction);
+  }
+#endif
 #endif
 }
 
-TEST_CASE("Unit_hipOccupancyMaxPotentialBlockSize_rangeValidation") {
+/**
+ * Test Description
+ * ------------------------
+ *  - Check if grid size and block size are within valid range using basic kernel functions:
+ *    -# When `dynSharedMemPerBlk = 0, blockSizeLimit = 0`
+ *      - Expected output: return `hipSuccess`
+ *    -# When `dynSharedMemPerBlk = sharedMemPerBlock, blockSizeLimit = maxThreadsPerBlock`
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/occupancy/hipOccupancyMaxPotentialBlockSize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipOccupancyMaxPotentialBlockSize_Positive_RangeValidation") {
   hipDeviceProp_t devProp;
-  int blockSize = 0;
-  int gridSize = 0;
-
-  // Get potential blocksize
-  HIP_CHECK(hipOccupancyMaxPotentialBlockSize(&gridSize, &blockSize, f1, 0, 0));
 
   HIP_CHECK(hipGetDeviceProperties(&devProp, 0));
 
-  // Check if blockSize doen't exceed maxThreadsPerBlock
-  REQUIRE(gridSize > 0); REQUIRE(blockSize > 0);
-  REQUIRE(blockSize <= devProp.maxThreadsPerBlock);
+  SECTION("dynSharedMemPerBlk = 0, blockSizeLimit = 0") {
+    MaxPotentialBlockSize(
+        [](int* gridSize, int* blockSize) {
+          return hipOccupancyMaxPotentialBlockSize(gridSize, blockSize, f1, 0, 0);
+        },
+        devProp.maxThreadsPerBlock);
+  }
 
-  // Pass dynSharedMemPerBlk, blockSizeLimit and check out param
-  blockSize = 0;
-  gridSize = 0;
-
-  HIP_CHECK(hipOccupancyMaxPotentialBlockSize(&gridSize, &blockSize, f1,
-           devProp.sharedMemPerBlock, devProp.maxThreadsPerBlock));
-
-  // Check if blockSize doen't exceed maxThreadsPerBlock
-  REQUIRE(gridSize > 0); REQUIRE(blockSize > 0);
-  REQUIRE(blockSize <= devProp.maxThreadsPerBlock);
-
+  SECTION("dynSharedMemPerBlk = sharedMemPerBlock, blockSizeLimit = maxThreadsPerBlock") {
+    MaxPotentialBlockSize(
+        [devProp](int* gridSize, int* blockSize) {
+          return hipOccupancyMaxPotentialBlockSize(
+              gridSize, blockSize, f1, devProp.sharedMemPerBlock, devProp.maxThreadsPerBlock);
+        },
+        devProp.maxThreadsPerBlock);
+  }
 }
 
-TEST_CASE("Unit_hipOccupancyMaxPotentialBlockSize_templateInvocation") {
-  int gridSize = 0, blockSize = 0;
+/**
+ * Test Description
+ * ------------------------
+ *  - Check is number of blocks is greater than 0 when API is invoked with a template:
+ *    -# When `dynSharedMemPerBlk = 0, blockSizeLimit = 0`
+ *      - Expected output: return `hipSuccess`
+ *    -# When `dynSharedMemPerBlk = sharedMemPerBlock, blockSizeLimit = maxThreadsPerBlock`
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/occupancy/hipOccupancyMaxPotentialBlockSize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipOccupancyMaxPotentialBlockSize_Positive_TemplateInvocation") {
+  hipDeviceProp_t devProp;
 
-  HIP_CHECK(hipOccupancyMaxPotentialBlockSize<void(*)(int *)>(&gridSize,
-                       &blockSize, f2, 0, 0));
-  REQUIRE(gridSize > 0);
-  REQUIRE(blockSize > 0);
+  HIP_CHECK(hipGetDeviceProperties(&devProp, 0));
+
+  SECTION("dynSharedMemPerBlk = 0, blockSizeLimit = 0") {
+    MaxPotentialBlockSize(
+        [](int* gridSize, int* blockSize) {
+          return hipOccupancyMaxPotentialBlockSize<void (*)(int*)>(gridSize, blockSize, f2, 0, 0);
+        },
+        devProp.maxThreadsPerBlock);
+  }
+
+  SECTION("dynSharedMemPerBlk = sharedMemPerBlock, blockSizeLimit = maxThreadsPerBlock") {
+    MaxPotentialBlockSize(
+        [devProp](int* gridSize, int* blockSize) {
+          return hipOccupancyMaxPotentialBlockSize<void (*)(int*)>(
+              gridSize, blockSize, f2, devProp.sharedMemPerBlock, devProp.maxThreadsPerBlock);
+        },
+        devProp.maxThreadsPerBlock);
+  }
 }
-
