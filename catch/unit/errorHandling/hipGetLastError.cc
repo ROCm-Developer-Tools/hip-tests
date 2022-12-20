@@ -24,6 +24,27 @@ THE SOFTWARE.
 #include <hip/hip_runtime_api.h>
 #include <threaded_zig_zag_test.hh>
 
+/**
+ * @addtogroup hipGetLastError hipGetLastError
+ * @{
+ * @ingroup ErrorTest
+ * `hipGetLastError(void)` -
+ * Return last error returned by any HIP runtime API call and resets the stored error code to
+ * `hipSuccess`.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that `hipErrorInvalidValue` is returned after invalid `hipMalloc` call.
+ *  - Validate that `hipSuccess` is returned afterwards.
+ * Test source
+ * ------------------------
+ *  - unit/errorHandling/hipGetLastError.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetLastError_Positive_Basic") {
   HIP_CHECK(hipGetLastError());
   HIP_CHECK_ERROR(hipMalloc(nullptr, 1), hipErrorInvalidValue);
@@ -31,6 +52,18 @@ TEST_CASE("Unit_hipGetLastError_Positive_Basic") {
   HIP_CHECK(hipGetLastError());
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that appropriate error is returned when working with multiple threads.
+ *  - Cause error on purpose within one of the threads.
+ * Test source
+ * ------------------------
+ *  - unit/errorHandling/hipGetLastError.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetLastError_Positive_Threaded") {
   class HipGetLastErrorThreadedTest : public ThreadedZigZagTest<HipGetLastErrorThreadedTest> {
    public:
