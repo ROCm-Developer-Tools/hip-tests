@@ -4,7 +4,8 @@
 		"Unit_hipStreamPerThread_DeviceReset_1",
 		"Unit_hipMallocManaged_OverSubscription",
 		"Unit_hipDeviceGetPCIBusId_Negative_PartialFill",
-		"Unit_hipInit_Negative"
+		"Unit_hipInit_Negative",
+		"Unit_hipMemGetAddressRange_Negative"
 	]
 
 }

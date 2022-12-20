@@ -23,16 +23,26 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <hip_test_helper.hh>
 
-/*
-  Positive tests:
-    - for each peer check other peer access
+/**
+ * @addtogroup hipDeviceCanAccessPeer hipDeviceCanAccessPeer
+ * @{
+ * @ingroup PeerToPeerTest
+ * `hipDeviceCanAccessPeer(int* canAccessPeer, int deviceId, int peerDeviceId)` -
+ * Determine if a device can access a peer's memory.
+ */
 
-  Negative tests:
-    - canAccessPeer pointer is nullptr
-    - deviceId is invalid
-    - peerDeviceId is invalid
-*/
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies that each available device can access memory from all other devices.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceCanAccessPeer.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceCanAccessPeer_positive") {
   int canAccessPeer = 0;
   int deviceCount = HipTest::getGeviceCount();
@@ -54,7 +64,24 @@ TEST_CASE("Unit_hipDeviceCanAccessPeer_positive") {
   }
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies handling of invalid arguments:
+ *    -# When output pointer to the peer result is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device ID is invalid (-1 or out of bounds)
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When peer device ID is invalid (-1 or out of bounds)
+ *      - Expected output: return `hipErrorInvalidDevice`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceCanAccessPeer.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceCanAccessPeer_negative") {
   int canAccessPeer = 0;
   int deviceCount = HipTest::getGeviceCount();
