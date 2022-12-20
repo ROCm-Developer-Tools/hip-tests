@@ -19,10 +19,34 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ */
+
 #define N 512
 
-/*
- * Validate argument list of texture object api.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments for [hipCreateTextureObject](@ref hipCreateTextureObject):
+ *    -# When output pointer to the texture object is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When resource descriptor is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When texture descriptor is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *  - Validates handling of invalid arguments for [hipDestroyTextureObject](@ref hipDestroyTextureObject):
+ *    -# When texture object handle is `nullptr`
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipCreateTextureObject_ArgValidation.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipCreateTextureObject_ArgValidation") {
   CHECK_IMAGE_SUPPORT
@@ -34,7 +58,7 @@ TEST_CASE("Unit_hipCreateTextureObject_ArgValidation") {
   hipTextureDesc texDesc;
   hipTextureObject_t texObj;
 
-  /** Initialization */
+  // Initialization
   HIP_CHECK(hipMalloc(&texBuf, N * sizeof(float)));
   // Populate resource descriptor
   memset(&resDesc, 0, sizeof(resDesc));
@@ -49,7 +73,7 @@ TEST_CASE("Unit_hipCreateTextureObject_ArgValidation") {
   texDesc.readMode = hipReadModeElementType;
 
 
-  /** Sections */
+  // Sections
   SECTION("TextureObject as nullptr") {
     ret = hipCreateTextureObject(nullptr, &resDesc, &texDesc, nullptr);
     REQUIRE(ret != hipSuccess);
@@ -78,6 +102,6 @@ TEST_CASE("Unit_hipCreateTextureObject_ArgValidation") {
     REQUIRE(ret == hipSuccess);
   }
 
-  /** De-Initialization */
+  // De-Initialization
   HIP_CHECK(hipFree(texBuf));
 }

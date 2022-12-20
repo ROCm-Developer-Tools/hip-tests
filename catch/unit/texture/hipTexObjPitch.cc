@@ -20,6 +20,15 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ * `hipCreateTextureObject(hipTextureObject_t* pTexObject, const hipResourceDesc* pResDesc,
+ * const hipTextureDesc* pTexDesc, const struct hipResourceViewDesc* pResViewDesc)` -
+ * Creates a texture object.
+ */
+
 #define SIZE_H 20
 #define SIZE_W 179
 
@@ -35,7 +44,18 @@ static __global__ void texture2dCopyKernel(hipTextureObject_t texObj,
 #endif
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Basic test where resource type is 2D pitch.
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipTexObjPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipTexObjPitch_texture2D", "", float, int,
                     unsigned char, int16_t, char, unsigned int) {
   CHECK_IMAGE_SUPPORT

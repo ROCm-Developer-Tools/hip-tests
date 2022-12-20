@@ -21,6 +21,12 @@ THE SOFTWARE.
 #include <hip_test_checkers.hh>
 #include <hip_texture_helper.hh>
 
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ */
+
 bool isGfx90a = false;
 
 template<bool normalizedCoords>
@@ -147,6 +153,18 @@ line1:
 
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Uses different addressing and filtering modes for 3D arrays.
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipTextureObj3DCheckModes.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipTextureObj3DCheckModes") {
   CHECK_IMAGE_SUPPORT
 

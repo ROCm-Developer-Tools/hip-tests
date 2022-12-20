@@ -19,6 +19,12 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ */
+
 __global__ void tex2DKernel(float* outputData,
                             hipTextureObject_t textureObject, int width) {
 #if !defined(__HIP_NO_IMAGE_SUPPORT) || !__HIP_NO_IMAGE_SUPPORT
@@ -28,6 +34,18 @@ __global__ void tex2DKernel(float* outputData,
 #endif
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Basic test where the resource type is a 2D array.
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipTextureObj2D.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipTextureObj2D_Check") {
   CHECK_IMAGE_SUPPORT
 

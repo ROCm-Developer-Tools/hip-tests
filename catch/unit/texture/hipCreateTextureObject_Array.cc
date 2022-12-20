@@ -19,8 +19,24 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
-/*
- * Validates Array Resource texture object with negative/functional tests.
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of a regular `nullptr` array
+ *    - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipCreateTextureObject_Array.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipCreateTextureObject_ArrayResource") {
   CHECK_IMAGE_SUPPORT
@@ -44,9 +60,18 @@ TEST_CASE("Unit_hipCreateTextureObject_ArrayResource") {
   REQUIRE(ret != hipSuccess);
 }
 
-/*
- * Validates MipMappedArray Resource texture object
- * with negative/functional tests.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of a regular `nullptr` mipmapped array
+ *    - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipCreateTextureObject_Array.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipCreateTextureObject_MmArrayResource") {
   CHECK_IMAGE_SUPPORT

@@ -19,11 +19,37 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ */
+
 #define UNALIGN_OFFSET 1
 #define N 512
 
-/*
- * Validates Linear Resource texture object with negative/functional tests.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid linear resource:
+ *    -# When device pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When size in bytes is 0
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When size in bytes is `size_t` maximum
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When a valid resource view descriptor is provided
+ *      - Platform specific (AMD)
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When device pointer is not aligned appropriately
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipCreateTextureObject_Linear.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipCreateTextureObject_LinearResource") {
   CHECK_IMAGE_SUPPORT
@@ -37,14 +63,14 @@ TEST_CASE("Unit_hipCreateTextureObject_LinearResource") {
   hipTextureObject_t texObj;
   hipDeviceProp_t devProp;
 
-  /** Initialization */
+  // Initialization
   HIP_CHECK(hipMalloc(&texBuf, N * sizeof(float)));
   HIP_CHECK(hipGetDeviceProperties(&devProp, 0));
   memset(&resDesc, 0, sizeof(resDesc));
   memset(&texDesc, 0, sizeof(texDesc));
   resDesc.resType = hipResourceTypeLinear;
 
-  /** Sections */
+  // Sections
   SECTION("hipResourceTypeLinear and devPtr(nullptr)") {
     // Populate resource descriptor
     resDesc.res.linear.devPtr = nullptr;
@@ -130,6 +156,6 @@ TEST_CASE("Unit_hipCreateTextureObject_LinearResource") {
     }
   }
 
-  /** De-Initialization */
+  // De-Initialization
   HIP_CHECK(hipFree(texBuf));
 }

@@ -19,14 +19,48 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ */
+
 #define UNALIGN_OFFSET 1
 #define SIZE_H 20
 #define SIZE_W 30
 #define N 512
 
-
-/*
- * Validates Pitch2D Resource texture object with negative and functional tests
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid 2D pitch resource:
+ *    -# When device pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When device pointer is not aligned appropriately
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When pitch is not aligned appropriately
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When height is 0
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When height is 0 and device pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When height is `size_t` maximum
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When width is 0
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When width is 0 and device pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When width is `size_t` maximum
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When pitch is `size_t` maximum
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipCreateTextureObject_Pitch2D.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipCreateTextureObject_Pitch2DResource") {
   CHECK_IMAGE_SUPPORT
@@ -39,7 +73,7 @@ TEST_CASE("Unit_hipCreateTextureObject_Pitch2DResource") {
   size_t devPitchA;
   float *devPtrA;
 
-  /** Initialization */
+  // Initialization
   HIP_CHECK(hipMallocPitch(reinterpret_cast<void**>(&devPtrA), &devPitchA,
                                              SIZE_W*sizeof(float), SIZE_H));
   HIP_CHECK(hipGetDeviceProperties(&devProp, 0));
@@ -47,7 +81,7 @@ TEST_CASE("Unit_hipCreateTextureObject_Pitch2DResource") {
   memset(&texDesc, 0, sizeof(texDesc));
   resDesc.resType = hipResourceTypePitch2D;
 
-  /** Sections */
+  // Sections
   SECTION("hipResourceTypePitch2D and devPtr(nullptr)") {
     // Populate resource descriptor
     resDesc.res.pitch2D.devPtr = nullptr;
@@ -212,7 +246,7 @@ TEST_CASE("Unit_hipCreateTextureObject_Pitch2DResource") {
     REQUIRE(ret != hipSuccess);
   }
 
-  /** De-Initialization */
+  // De-Initialization
   HIP_CHECK(hipFree(devPtrA));
 }
 

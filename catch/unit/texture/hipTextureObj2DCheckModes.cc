@@ -21,6 +21,12 @@ THE SOFTWARE.
 #include <hip_test_checkers.hh>
 #include <hip_texture_helper.hh>
 
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ */
+
 template<bool normalizedCoords>
 __global__ void tex2DKernel(float *outputData, hipTextureObject_t textureObject,
                             int width, int height, float offsetX,
@@ -112,6 +118,18 @@ line1:
   REQUIRE(result);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Uses different addressing and filtering modes for 2D arrays.
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipTextureObj2DCheckModes.cc
+ * Test requirements
+ * ------------------------
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipTextureObj2DCheckModes") {
   CHECK_IMAGE_SUPPORT
 

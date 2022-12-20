@@ -19,6 +19,12 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipCreateTextureObject hipCreateTextureObject
+ * @{
+ * @ingroup TextureTest
+ */
+
 // Height Width Vector
 std::vector<unsigned int> hw_vector = {2048, 1024, 512, 256, 64};
 std::vector<unsigned int> mip_vector = {8, 4, 2, 1};
@@ -121,6 +127,19 @@ static void runMipMapTest(unsigned int width, unsigned int height, unsigned int 
 }
 #endif
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Basic test where resource type is a mipmapped array.
+ * Test source
+ * ------------------------
+ *  - unit/texture/hipTextureMipmapObj2D.cc
+ * Test requirements
+ * ------------------------
+ *  - Host specific (WINDOWS)
+ *  - Textures supported on device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipTextureMipmapObj2D_Check") {
   CHECK_IMAGE_SUPPORT
 
