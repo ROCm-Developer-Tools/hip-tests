@@ -14,6 +14,13 @@
 	   "Unit_hipInit_Negative",
 	   "Unit_hipMemset_Negative_OutOfBoundsPtr",
 	   "Unit_hipDeviceReset_Positive_Basic",
-	   "Unit_hipDeviceReset_Positive_Threaded"
+	   "Unit_hipDeviceReset_Positive_Threaded",
+	   "Note: Following four tests disabled due to defect - EXSWHTEC-203",
+	   "Unit_hipGraphAddMemsetNode_Positive_Basic - uint16_t",
+	   "Unit_hipGraphAddMemsetNode_Positive_Basic - uint32_t",
+	   "Unit_hipGraphMemsetNodeSetParams_Positive_Basic - uint16_t",
+	   "Unit_hipGraphMemsetNodeSetParams_Positive_Basic - uint32_t",
+	   "Note: Test disabled due to defect - EXSWHTEC-207",
+	   "Unit_hipGraphExecMemsetNodeSetParams_Negative_Updating_Non1D_Node"
 	]
 }
