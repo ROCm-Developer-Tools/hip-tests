@@ -6,8 +6,10 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
@@ -17,169 +19,180 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-Functional-
-1) Create a graph, add Memcpy node to graph, update the Memcpy node params with set and make sure they are taking effect.
-Negative-
-1) Pass pGraphNode as nullptr and check if api returns error.
-2) Pass destination ptr is nullptr, api expected to return error code.
-3) Pass source ptr is nullptr, api expected to return error code.
-4) Pass count as zero, api expected to return error code.
-5) Pass same pointer as source ptr and destination ptr, api expected to return error code.
-6) Pass overlap memory as source ptr and destination ptr where source ptr is ahead of destination ptr, api expected to return error code.
-7) Pass overlap memory as source ptr and destination ptr where destination ptr is ahead of source ptr, api expected to return error code.
-8) If count is more than allocated size for source and destination ptr, api should return error code.
-9) If count is less than allocated size for source and destination ptr, api should return error code.
-*/
+#include <functional>
 
 #include <hip_test_common.hh>
-#include <hip_test_checkers.hh>
-#include <hip_test_kernels.hh>
+#include <hip_test_defgroups.hh>
+#include <memcpy1d_tests_common.hh>
 
-/* Test verifies hipGraphMemcpyNodeSetParams1D API Negative scenarios.
+#include "graph_tests_common.hh"
+
+static inline hipMemcpyKind ReverseMemcpyDirection(const hipMemcpyKind direction) {
+  switch (direction) {
+    case hipMemcpyHostToDevice:
+      return hipMemcpyDeviceToHost;
+    case hipMemcpyDeviceToHost:
+      return hipMemcpyHostToDevice;
+    default:
+      return direction;
+  }
+};
+
+/**
+ * @addtogroup hipGraphMemcpyNodeSetParams1D hipGraphMemcpyNodeSetParams1D
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphMemcpyNodeSetParams1D(hipGraphNode_t node, void *dst, const void *src, size_t count,
+ * hipMemcpyKind kind)` - 	Sets a memcpy node's parameters to perform a 1-dimensional copy
  */
-TEST_CASE("Unit_hipGraphMemcpyNodeSetParams1D_Negative") {
-  constexpr size_t N = 1024;
-  constexpr size_t Nbytes = N * sizeof(int);
-  int *A_d, *A_h;
-  hipGraphNode_t memcpyNode{};
-  hipError_t ret;
 
-  HIP_CHECK(hipMalloc(&A_d, Nbytes));
-  HIP_CHECK(hipMalloc(&A_h, Nbytes));
+/**
+ * Test Description
+ * ------------------------
+ *    - Verify that node parameters get updated correctly by creating a node with valid but
+ * incorrect parameters, and the setting them to the correct values after which the graph is
+ * executed and the results of the memcpy verified.
+ * The test is run for all possible memcpy directions, with both the corresponding memcpy
+ * kind and hipMemcpyDefault, as well as half page and full page allocation sizes.
+ * Test source
+ * ------------------------
+ *    - unit/graph/hipGraphMemcpyNodeSetParams1D.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipGraphMemcpyNodeSetParams1D_Positive_Basic") {
+  constexpr auto f = [](void* dst, void* src, size_t count, hipMemcpyKind direction) {
+    hipGraph_t graph = nullptr;
+    HIP_CHECK(hipGraphCreate(&graph, 0));
+    hipGraphNode_t node = nullptr;
+    HIP_CHECK(hipGraphAddMemcpyNode1D(&node, graph, nullptr, 0, src, dst, count / 2,
+                                      ReverseMemcpyDirection(direction)));
+    HIP_CHECK(hipGraphMemcpyNodeSetParams1D(node, dst, src, count, direction));
+    hipGraphExec_t graph_exec = nullptr;
+    HIP_CHECK(hipGraphInstantiate(&graph_exec, graph, nullptr, nullptr, 0));
+    HIP_CHECK(hipGraphLaunch(graph_exec, hipStreamPerThread));
+    HIP_CHECK(hipStreamSynchronize(hipStreamPerThread));
 
-  hipGraph_t graph;
-  HIP_CHECK(hipGraphCreate(&graph, 0));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyNode, graph, nullptr, 0, A_d, A_h,
-                                    Nbytes, hipMemcpyHostToDevice));
+    HIP_CHECK(hipGraphExecDestroy(graph_exec));
+    HIP_CHECK(hipGraphDestroy(graph));
 
-  SECTION("Pass pGraphNode as nullptr") {
-    ret = hipGraphMemcpyNodeSetParams1D(nullptr, A_d, A_h, Nbytes,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
+    return hipSuccess;
+  };
+
+#if HT_NVIDIA
+  MemcpyWithDirectionCommonTests<false>(f);
+#else
+  using namespace std::placeholders;
+
+  SECTION("Device to host") {
+    MemcpyDeviceToHostShell<false>(std::bind(f, _1, _2, _3, hipMemcpyDeviceToHost));
   }
-  SECTION("Pass destination ptr is nullptr") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, nullptr, A_h, Nbytes,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
+
+  SECTION("Host to device") {
+    MemcpyHostToDeviceShell<false>(std::bind(f, _1, _2, _3, hipMemcpyHostToDevice));
   }
-  SECTION("Pass source ptr is nullptr") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, nullptr, Nbytes,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
+
+  SECTION("Device to device") {
+    SECTION("Peer access enabled") {
+      MemcpyDeviceToDeviceShell<false, true>(std::bind(f, _1, _2, _3, hipMemcpyDeviceToDevice));
+    }
+    SECTION("Peer access disabled") {
+      MemcpyDeviceToDeviceShell<false, false>(std::bind(f, _1, _2, _3, hipMemcpyDeviceToDevice));
+    }
   }
-  SECTION("Pass count as zero") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, A_h, 0,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
+
+  SECTION("Device to device with default kind") {
+    SECTION("Peer access enabled") {
+      MemcpyDeviceToDeviceShell<false, true>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
+    }
+    SECTION("Peer access disabled") {
+      MemcpyDeviceToDeviceShell<false, false>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
+    }
   }
-#if HT_AMD
-  SECTION("Pass same pointer as source ptr and destination ptr") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, A_d, Nbytes,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
+
+// Disabled on AMD due to defect - EXSWHTEC-209
+#if 0
+  SECTION("Host to host") {
+    MemcpyHostToHostShell<false>(std::bind(f, _1, _2, _3, hipMemcpyHostToHost));
   }
-  SECTION("Pass overlap memory where destination ptr is ahead of source ptr") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, A_d-5, Nbytes,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipSuccess == ret);
+
+  SECTION("Host to host with default kind") {
+    MemcpyHostToHostShell<false>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
   }
 #endif
-  SECTION("Pass overlap memory where source ptr is ahead of destination ptr") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d+5, A_d, Nbytes-5,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Copy more than allocated memory") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, A_h, Nbytes+8,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Copy less than allocated memory") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, A_h, Nbytes-8,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipSuccess == ret);
-  }
-  SECTION("Change the kind from H2D to D2H") {
-    ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, A_h, Nbytes,
-                                        hipMemcpyDeviceToHost);
-    REQUIRE(hipSuccess == ret);
+
+// Disabled on AMD due to defect - EXSWHTEC-210
+#if 0
+  SECTION("Device to host with default kind") {
+    MemcpyDeviceToHostShell<false>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
   }
 
-  HIP_CHECK(hipFree(A_d));
-  HIP_CHECK(hipFree(A_h));
-  HIP_CHECK(hipGraphDestroy(graph));
+  SECTION("Host to device with default kind") {
+    MemcpyHostToDeviceShell<false>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
+  }
+#endif
+
+#endif
 }
 
-/* Test verifies hipGraphMemcpyNodeSetParams1D API Functional scenarios.
+/**
+ * Test Description
+ * ------------------------
+ *    - Verify API behaviour with invalid arguments:
+ *        -# node is nullptr
+ *        -# dst is nullptr
+ *        -# src is nullptr
+ *        -# kind is an invalid enum value
+ *        -# count is zero
+ *        -# count is larger than dst allocation size
+ *        -# count is larger than src allocation size
+ * Test source
+ * ------------------------
+ *    - unit/graph/hipGraphMemcpyNodeSetParams1D.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipGraphMemcpyNodeSetParams1D_Functional") {
-  constexpr size_t N = 1024;
-  constexpr size_t Nbytes = N * sizeof(int);
-  constexpr auto blocksPerCU = 6;  // to hide latency
-  constexpr auto threadsPerBlock = 256;
-  int *A_d, *B_d, *C_d;
-  int *A_h, *B_h, *C_h;
-  size_t NElem{N};
-
-  int *hData = reinterpret_cast<int*>(malloc(Nbytes));
-  REQUIRE(hData != nullptr);
-  memset(hData, 0, Nbytes);
-
-  hipGraphNode_t memcpyH2D_A, memcpyH2D_B, memcpyD2H_C;
-  hipGraphNode_t kernel_vecAdd;
-  hipKernelNodeParams kernelNodeParams{};
-  hipGraph_t graph;
-  hipGraphExec_t graphExec;
-  hipStream_t streamForGraph;
-
-  HIP_CHECK(hipStreamCreate(&streamForGraph));
-
-  HipTest::initArrays(&A_d, &B_d, &C_d, &A_h, &B_h, &C_h, N, false);
-  unsigned blocks = HipTest::setNumBlocks(blocksPerCU, threadsPerBlock, N);
-
+TEST_CASE("Unit_hipGraphMemcpyNodeSetParams1D_Negative_Parameters") {
+  using namespace std::placeholders;
+  hipGraph_t graph = nullptr;
   HIP_CHECK(hipGraphCreate(&graph, 0));
 
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyH2D_A, graph, nullptr, 0, A_d, A_h,
-                                    Nbytes, hipMemcpyHostToDevice));
+  int src[2] = {}, dst[2] = {};
 
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyH2D_B, graph, nullptr, 0, B_d, B_h,
-                                    Nbytes, hipMemcpyHostToDevice));
+  hipGraphNode_t node = nullptr;
+  HIP_CHECK(
+      hipGraphAddMemcpyNode1D(&node, graph, nullptr, 0, dst, src, sizeof(dst), hipMemcpyDefault));
 
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyD2H_C, graph, nullptr, 0, C_h, C_d,
-                                    Nbytes, hipMemcpyDeviceToHost));
 
-  HIP_CHECK(hipGraphMemcpyNodeSetParams1D(memcpyD2H_C, hData, C_d, Nbytes,
-                                          hipMemcpyDeviceToHost));
+  SECTION("node == nullptr") {
+    HIP_CHECK_ERROR(hipGraphMemcpyNodeSetParams1D(nullptr, dst, src, sizeof(dst), hipMemcpyDefault),
+                    hipErrorInvalidValue);
+  }
 
-  void* kernelArgs2[] = {&A_d, &B_d, &C_d, reinterpret_cast<void *>(&NElem)};
-  kernelNodeParams.func = reinterpret_cast<void *>(HipTest::vectorADD<int>);
-  kernelNodeParams.gridDim = dim3(blocks);
-  kernelNodeParams.blockDim = dim3(threadsPerBlock);
-  kernelNodeParams.sharedMemBytes = 0;
-  kernelNodeParams.kernelParams = reinterpret_cast<void**>(kernelArgs2);
-  kernelNodeParams.extra = nullptr;
-  HIP_CHECK(hipGraphAddKernelNode(&kernel_vecAdd, graph, nullptr, 0,
-                                                        &kernelNodeParams));
+  MemcpyWithDirectionCommonNegativeTests(
+      std::bind(hipGraphMemcpyNodeSetParams1D, node, _1, _2, _3, _4), dst, src, sizeof(dst),
+      hipMemcpyDefault);
 
-  // Create dependencies
-  HIP_CHECK(hipGraphAddDependencies(graph, &memcpyH2D_A, &kernel_vecAdd, 1));
-  HIP_CHECK(hipGraphAddDependencies(graph, &memcpyH2D_B, &kernel_vecAdd, 1));
-  HIP_CHECK(hipGraphAddDependencies(graph, &kernel_vecAdd, &memcpyD2H_C, 1));
+  SECTION("count == 0") {
+    HIP_CHECK_ERROR(hipGraphMemcpyNodeSetParams1D(node, dst, src, 0, hipMemcpyDefault),
+                    hipErrorInvalidValue);
+  }
 
-  // Instantiate and launch the graph
-  HIP_CHECK(hipGraphInstantiate(&graphExec, graph, nullptr, nullptr, 0));
-  HIP_CHECK(hipGraphLaunch(graphExec, streamForGraph));
-  HIP_CHECK(hipStreamSynchronize(streamForGraph));
+  SECTION("count larger than dst allocation size") {
+    LinearAllocGuard<int> dev_dst(LinearAllocs::hipMalloc, sizeof(int));
+    HIP_CHECK_ERROR(
+        hipGraphMemcpyNodeSetParams1D(node, dev_dst.ptr(), src, sizeof(src), hipMemcpyDefault),
+        hipErrorInvalidValue);
+  }
 
-  // Verify graph execution result
-  HipTest::checkVectorADD(A_h, B_h, hData, N);
+  SECTION("count larger than src allocation size") {
+    LinearAllocGuard<int> dev_src(LinearAllocs::hipMalloc, sizeof(int));
+    HIP_CHECK_ERROR(
+        hipGraphMemcpyNodeSetParams1D(node, dst, dev_src.ptr(), sizeof(dst), hipMemcpyDefault),
+        hipErrorInvalidValue);
+  }
 
-  HipTest::freeArrays(A_d, B_d, C_d, A_h, B_h, C_h, false);
-  HIP_CHECK(hipGraphExecDestroy(graphExec));
-  HIP_CHECK(hipStreamDestroy(streamForGraph));
   HIP_CHECK(hipGraphDestroy(graph));
-  free(hData);
 }
-
