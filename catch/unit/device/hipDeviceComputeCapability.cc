@@ -16,25 +16,35 @@ LIABILITY, WHETHER INN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/*
-Testcase Scenarios :
-Unit_hipDeviceComputeCapability_ValidateVersion - Check if hipDeviceComputeCapability api returns valid Major and Minor versions
-Unit_hipDeviceComputeCapability_Negative - Test unsuccessful execution of hipDeviceComputeCapability when nullptr
-                                           or invalid device is set as input parameter
-*/
 
-/*
- * Conformance test for checking functionality of
- * hipError_t hipDeviceComputeCapability(int* major, int* minor, hipDevice_t device);
- */
 #include <hip_test_common.hh>
 
 /**
- * hipDeviceComputeCapability negative tests
- * Scenario1: Validates if &major = nullptr returns error code
- * Scenario2: Validates if &minor = nullptr returns error code
- * Scenario3: Validates if device is -1
- * Scenario4: Validates if device is out of bounds
+ * @addtogroup hipDeviceComputeCapability hipDeviceComputeCapability
+ * @{
+ * @ingroup DriverTest
+ * `hipDeviceComputeCapability(int* major, int* minor, hipDevice_t device)` -
+ * Returns the compute capability of the device.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the major number is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When output pointer to the minor number is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When device ordinal is negative
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When device ordinal is out of bounds
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceComputeCapability.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceComputeCapability_Negative") {
   int major, minor, numDevices;
@@ -71,7 +81,17 @@ TEST_CASE("Unit_hipDeviceComputeCapability_Negative") {
   }
 }
 
-// Scenario 5 : Check whether major and minor version value is valid.
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that valid major and minor numbers are returned.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceComputeCapability.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceComputeCapability_ValidateVersion") {
   int major, minor;
   hipDevice_t device;

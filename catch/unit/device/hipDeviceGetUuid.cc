@@ -16,23 +16,29 @@ LIABILITY, WHETHER INN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/*
-Testcase Scenarios :
-Unit_hipDeviceGetUuid_Positive - Check if hipDeviceGetUuid api returns valid UUID
-Unit_hipDeviceGetUuid_Negative - Test unsuccessful execution of hipDeviceGetUuid when nullptr
-                                 or invalid device is set as input parameter
-*/
-/*
- * Conformance test for checking functionality of
- * hipError_t hipDeviceGetUuid(hipUUID* uuid, hipDevice_t device);
- */
+
 #include <hip_test_common.hh>
 #include <cstring>
 #include <cstdio>
 
 /**
- * hipDeviceGetUuid positive test
- * Scenario1: Validates the returned UUID
+ * @addtogroup hipDeviceGetUuid hipDeviceGetUuid
+ * @{
+ * @ingroup DriverTest
+ * `hipDeviceGetUuid(hipUUID* uuid, hipDevice_t device)` -
+ * Returns an UUID for the device.[BETA]
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Check that non-empty UUID is returned for each available device.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetUuid.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetUuid_Positive") {
   hipDevice_t device;
@@ -47,10 +53,21 @@ TEST_CASE("Unit_hipDeviceGetUuid_Positive") {
 }
 
 /**
- * hipDeviceGetUuid negative tests
- * Scenario2: Validates returned error code for UUID = nullptr
- * Scenario3: Validates returned error code if device is -1
- * Scenario4: Validates returned error code if device is out of bounds
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the UUID is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When device ordinal is negative
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When device ordinal is out of bounds
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetUuid.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetUuid_Negative") {
   int numDevices = 0;
@@ -60,11 +77,8 @@ TEST_CASE("Unit_hipDeviceGetUuid_Negative") {
 
   if (numDevices > 0) {
     HIP_CHECK(hipDeviceGet(&device, 0));
-    // Scenario 2
     REQUIRE_FALSE(hipSuccess == hipDeviceGetUuid(nullptr, device));
-    // Scenario 3
     REQUIRE_FALSE(hipSuccess == hipDeviceGetUuid(&uuid, -1));
-    // Scenario 4
     REQUIRE_FALSE(hipSuccess == hipDeviceGetUuid(&uuid, numDevices));
   }
 }

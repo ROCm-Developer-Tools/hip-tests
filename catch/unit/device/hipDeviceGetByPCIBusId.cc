@@ -20,11 +20,27 @@
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipDeviceGetByPCIBusId hipDeviceGetByPCIBusId
+ * @{
+ * @ingroup DriverTest
+ * `hipDeviceGetByPCIBusId(int* device, const char* pciBusId)` -
+ * Returns a handle to a compute device.
+ */
+
 #define SIZE 13
 
-
 /**
- * scenario: Validates device number from pciBusIdstr string
+ * Test Description
+ * ------------------------
+ *  - Check that PCI bus ID is the same as the one returned from attributes.
+ *  - Perform for each device.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetByPCIBusId.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetByPCIBusId_Functional") {
   char pciBusId[SIZE]{};
@@ -49,10 +65,20 @@ TEST_CASE("Unit_hipDeviceGetByPCIBusId_Functional") {
   }
 }
 
-
 /**
- * Validates negative scenarios for hipDeviceGetByPCIBusId
- * scenario: device = nullptr and pciBusIdstr = nullptr
+ * Test Description
+ * ------------------------
+ *  - Validates handling of `nullptr` arguments:
+ *    -# When the output pointer to the device is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the PCI bus ID pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetByPCIBusId.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetByPCIBusId_NegativeNullChk") {
   int device = -1;
@@ -66,9 +92,19 @@ TEST_CASE("Unit_hipDeviceGetByPCIBusId_NegativeNullChk") {
 }
 
 /**
- * Validates negative scenarios for hipDeviceGetByPCIBusId
- * scenario1: Pass an empty like ""
- * scenario2: Pass an shorter string "0000:"
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid PCI bus ID strings:
+ *    -# When PCI bus ID is an empty string
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When PCI bus ID is a short string
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetByPCIBusId.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetByPCIBusId_NegativeInputString") {
   int device = -1;
@@ -81,8 +117,17 @@ TEST_CASE("Unit_hipDeviceGetByPCIBusId_NegativeInputString") {
 }
 
 /**
- * Validates negative scenarios for hipDeviceGetByPCIBusId
- * scenario: Pass wrong bus id in pciBusIdstr
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid PCI bus ID values:
+ *    -# Passes non-existing PCI bus ID
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetByPCIBusId.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetByPCIBusId_WrongBusID") {
   int deviceCount = 0;

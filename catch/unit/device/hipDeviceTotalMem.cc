@@ -17,19 +17,32 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Conformance test for checking functionality of
- * hipError_t hipDeviceTotalMem(size_t* bytes, hipDevice_t device);
- */
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipDeviceTotalMem hipDeviceTotalMem
+ * @{
+ * @ingroup DriverTest
+ * `hipDeviceTotalMem(size_t* bytes, hipDevice_t device)` -
+ * Returns the total amount of memory on the device.
+ */
 
 /**
- * hipDeviceTotalMem tests
- * Scenario1: Validates if bytes = nullptr returns hip error code.
- * Scenario2: Validates if error code is returned for device = -1.
- * Scenario3: Validates if error code is returned for device = deviceCount.
- * Scenario4: Compare total memory size with hipDeviceProp_t.totalGlobalMem for each device.
+ * Test Description
+ * ------------------------
+ *  - Validate handling of invalid arguments:
+ *    -# When output pointer to the total memory is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device ordinal is negative (-1)
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When device ordinal is out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceTotalMem.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceTotalMem_NegTst") {
 #if HT_NVIDIA
@@ -54,7 +67,18 @@ TEST_CASE("Unit_hipDeviceTotalMem_NegTst") {
   }
 }
 
-// Scenario 4
+/**
+ * Test Description
+ * ------------------------
+ *  - Check that the returned number of bytes is the same as the
+ *    one from device attributes.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceTotalMem.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceTotalMem_ValidateTotalMem") {
   size_t totMem;
   int numDevices = 0;
@@ -77,6 +101,19 @@ TEST_CASE("Unit_hipDeviceTotalMem_ValidateTotalMem") {
   REQUIRE(total == totMem);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Check that total memory is returned when other device is
+ *    set than the one in the API call.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceTotalMem.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-device test
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceTotalMem_NonSelectedDevice") {
   auto deviceCount = HipTest::getDeviceCount();
   if (deviceCount < 2) {

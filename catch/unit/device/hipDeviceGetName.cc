@@ -17,10 +17,6 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Conformance test for checking functionality of
- * hipError_t hipDeviceGetName(char* name, int len, hipDevice_t device);
- */
 #include <cstddef>
 #include <hip_test_common.hh>
 #include <cstring>
@@ -29,16 +25,34 @@ THE SOFTWARE.
 #include <algorithm>
 #include <iterator>
 
+/**
+ * @addtogroup hipDeviceGetName hipDeviceGetName
+ * @{
+ * @ingroup DriverTest
+ * `hipDeviceGetName(char* name, int len, hipDevice_t device)` -
+ * Returns an identifer string for the device.
+ */
+
 constexpr size_t LEN = 256;
 
 /**
- * hipDeviceGetName tests
- * Scenario1: Validates the name string with hipDeviceProp_t.name[256]
- * Scenario2: Validates returned error code for name = nullptr
- * Scenario3: Validates returned error code for len = 0
- * Scenario4: Validates returned error code for len < 0
- * Scenario5: Validates returned error code for an invalid device
- * Scenario6: Validates partially filling the name into a char array
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# Valid devices and output pointer to the name is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# Valid devices and output name buffer length is 0
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# Valid devices and output name buffer has length -1
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# Invalid devices, device ordinal is out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetName.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetName_NegTst") {
   std::array<char, LEN> name;
@@ -87,6 +101,18 @@ TEST_CASE("Unit_hipDeviceGetName_NegTst") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Get the device name for each device.
+ *  - Compare the name with the name returned from device properties.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetName.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceGetName_CheckPropName") {
   int numDevices = 0;
   std::array<char, LEN> name;
@@ -103,6 +129,18 @@ TEST_CASE("Unit_hipDeviceGetName_CheckPropName") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Set name buffer length to the half of the name length.
+ *  - Check that device name is successfuly returned.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetName.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceGetName_PartialFill") {
 #if HT_AMD
   HipTest::HIP_SKIP_TEST("EXSWCPHIPT-108");

@@ -18,13 +18,29 @@ LIABILITY, WHETHER INN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/*
-Testcase Scenarios :
-Unit_hipDriverGetVersion_Positive - Test simple reading of HIP driver version with hipDriverGetVersion api
-Unit_hipDriverGetVersion_Negative - Test unsuccessful execution of hipDriverGetVersion when nullptr is set as input parameter
-*/
+
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipDriverGetVersion hipDriverGetVersion
+ * @{
+ * @ingroup DriverTest
+ * `hipDriverGetVersion(int* driverVersion)` -
+ * Returns the approximate HIP driver version.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Check that the returned driver version has valid value.
+ *  - Both CUDA and HIP driver version can be returned, depending on the device.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDriverGetVersion.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDriverGetVersion_Positive") {
 
   int driverVersion = -1;
@@ -33,6 +49,19 @@ TEST_CASE("Unit_hipDriverGetVersion_Positive") {
   INFO("Driver version " << driverVersion);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the driver version is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDriverGetVersion.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDriverGetVersion_Negative") {
   // If initialization is attempted with nullptr, error shall be reported
   HIP_CHECK_ERROR(hipDriverGetVersion(nullptr), hipErrorInvalidValue);

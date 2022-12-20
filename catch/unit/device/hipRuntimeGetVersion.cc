@@ -16,21 +16,32 @@ LIABILITY, WHETHER INN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/*
-Testcase Scenarios :
-Unit_hipRuntimeGetVersion_Positive - Test simple reading of HIP runtime version with hipRuntimeGetVersion api
-Unit_hipRuntimeGetVersion_Negative - Test unsuccessful execution of hipRuntimeGetVersion when nullptr is set as input parameter
-*/
 
-/*
- * Conformance test for checking functionality of
- * hipError_t hipRuntimeGetVersion(int* runtimeVersion);
+#include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipRuntimeGetVersion hipRuntimeGetVersion
+ * @{
+ * @ingroup DriverTest
+ * `hipRuntimeGetVersion(int* runtimeVersion)` -
+ * Returns the approximate HIP runtime version. 
  * On HIP/HCC path this function returns HIP runtime patch version
  * (a 5 digit code) however on
  * HIP/NVCC path this function return CUDA runtime version.
  */
-#include <hip_test_common.hh>
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that valid runtime version is returned.
+ *  - Print out the runtime version.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipRuntimeGetVersion.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipRuntimeGetVersion_Positive") {
   int runtimeVersion = -1;
   HIP_CHECK(hipRuntimeGetVersion(&runtimeVersion));
@@ -38,6 +49,19 @@ TEST_CASE("Unit_hipRuntimeGetVersion_Positive") {
   INFO("Runtime version " << runtimeVersion);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the runtime version is nullptr
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipRuntimeGetVersion.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipRuntimeGetVersion_Negative") {
   // If initialization is attempted with nullptr, error shall be reported
   CHECK_FALSE(hipRuntimeGetVersion(nullptr) == hipSuccess);

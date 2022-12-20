@@ -25,6 +25,14 @@
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipDeviceGetPCIBusId hipDeviceGetPCIBusId
+ * @{
+ * @ingroup DriverTest
+ * `hipDeviceGetPCIBusId(char* pciBusId, int len, int device)` -
+ * Returns a PCI Bus Id string for the device, overloaded to take int device ID.
+ */
+
 #define MAX_DEVICE_LENGTH 20
 
 namespace hipDeviceGetPCIBusIdTests {
@@ -37,6 +45,18 @@ void getPciBusId(int deviceCount,
 }
 }  // namespace hipDeviceGetPCIBusIdTests
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Check that PCI bus ID is the same as the one returned from attributes.
+ *  - Perform for each device.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetByPCIBusId.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceGetPCIBusId_Check_PciBusID_WithAttr") {
   int deviceCount = 0;
   HIP_CHECK(hipGetDeviceCount(&deviceCount));
@@ -71,6 +91,19 @@ TEST_CASE("Unit_hipDeviceGetPCIBusId_Check_PciBusID_WithAttr") {
          " hipDeviceGetAttribute matched for all gpus\n");
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that an error is returned when the output buffer has length
+ *    that is smaller than the full PCI bus ID.
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetPCIBusId.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceGetPCIBusId_Negative_PartialFill") {
   std::array<char, MAX_DEVICE_LENGTH> busID;
 
@@ -95,14 +128,26 @@ TEST_CASE("Unit_hipDeviceGetPCIBusId_Negative_PartialFill") {
   REQUIRE(std::all_of(strEnd+1, end, [](char& c) { return c == fillValue; }));
 }
 
-
 /**
- * Validates negative scenarios for hipDeviceGetPCIBusId
- * scenario1: pciBusId = nullptr
- * scenario2: device = -1 (Invalid Device)
- * scenario3: device = Non Existing Device
- * scenario4: len = 0
- * scenario5: len < 0
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the PCI bus ID is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the length of the output buffer is 0
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the length of the output buffer is less than 0
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the device ordinal is negative (-1)
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the device ordinal is out of bounds
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceGetPCIBusId.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipDeviceGetPCIBusId_NegTst") {
   char pciBusId[MAX_DEVICE_LENGTH];

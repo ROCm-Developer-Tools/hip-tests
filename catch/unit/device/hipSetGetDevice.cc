@@ -135,6 +135,35 @@ TEST_CASE("Unit_hipSetGetDevice_Negative") {
   }
 }
 
+/**
+ * @addtogroup hipDeviceGet hipDeviceGet
+ * @{
+ * @ingroup DriverTest
+ * `hipDeviceGet(hipDevice_t* device, int ordinal)` -
+ * Returns a handle to a compute device.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipSetDevice_BasicSetGet
+ *  - @ref Unit_hipGetSetDevice_MultiThreaded
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the device is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device ordinal is out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When device ordinal is negative
+ *      - Expected output: return `hipErrorInvalidDevice`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipSetGetDevice.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceGet_Negative") {
   // TODO enable after EXSWCPHIPT-104 is fixed
 #if HT_NVIDIA
