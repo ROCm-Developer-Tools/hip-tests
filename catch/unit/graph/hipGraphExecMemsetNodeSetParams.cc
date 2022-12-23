@@ -6,196 +6,225 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANNTY OF ANY KIND, EXPRESS OR
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER INN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-Functional-
-1) Instantiate a graph with memset node, obtain executable graph and update the
-   hipMemsetParams node params with set. Make sure they are taking effect.
-Negative-
-1) Pass hGraphExec as nullptr and verify api returns error code.
-2) Pass graph node as nullptr and verify api returns error code.
-3) Pass different hipGraphNode_t which was not used in graphExec and verify api returns error code.
-4) Pass Pass different Graph which was not used in graphExec and verify api returns error code.
-5) Pass pNodeParams as nullptr and verify api returns error code.
-6) Pass pNodeParams as empty structure object and verify api returns error code.
-7) Pass hipMemsetParams::dst as nullptr, api should return error code.
-8) Pass hipMemsetParams::element size other than 1, 2, or 4 and check api should return error code.
-9) Pass hipMemsetParams::height as zero and check api should return error code.
-*/
+#include <functional>
 
+#include <hip_test_defgroups.hh>
 #include <hip_test_common.hh>
-#include <hip_test_checkers.hh>
 
-/* Test verifies hipGraphExecMemsetNodeSetParams API Negative scenarios.
+#include "graph_memset_node_test_common.hh"
+#include "graph_tests_common.hh"
+
+/**
+ * @addtogroup hipGraphExecMemsetNodeSetParams hipGraphExecMemsetNodeSetParams
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphExecMemsetNodeSetParams(hipGraphExec_t hGraphExec, hipGraphNode_t node, const
+ * hipMemsetParams *pNodeParams)` -
+ * Sets the parameters for a memset node in the given graphExec.
  */
-TEST_CASE("Unit_hipGraphExecMemsetNodeSetParams_Negative") {
-  constexpr size_t N = 1024;
-  constexpr size_t Nbytes = N * sizeof(char);
-  constexpr size_t val = 0;
-  char *devData, *hOutputData;
 
-  HIP_CHECK(hipMalloc(&devData, Nbytes));
-  hOutputData = reinterpret_cast<char *>(malloc(Nbytes));
-  REQUIRE(hOutputData != nullptr);
-  memset(hOutputData, 0,  Nbytes);
+/**
+ * Test Description
+ * ------------------------
+ *  - Verify that node parameters get updated correctly by creating a node with valid but
+ *    incorrect parameters
+ *  - Afterwards, correct values in the executable graph are set.
+ *  - The executable graph is run and the results of the memset is verified.
+ *  - `hipGraphMemsetNodeGetParams` is used to verify that node parameters in the graph were not updated,
+ *    which also constitutes a test for said API.
+ *  - The test is repeated for all valid element sizes(1, 2, 4).
+ *  - The test is repeated for several allocations of different width(height is always 1 because only 1D memset nodes
+ *    can be updated).
+ *  - The test is repeated for both host and device.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecMemsetNodeSetParams.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEMPLATE_TEST_CASE("Unit_hipGraphExecMemsetNodeSetParams_Positive_Basic", "", uint8_t, uint16_t,
+                   uint32_t) {
+  const size_t width = GENERATE(1, 64, kPageSize / sizeof(TestType) + 1);
 
-  hipGraph_t graph;
-  hipError_t ret;
-  hipGraphExec_t graphExec;
-  hipStream_t streamForGraph;
-  hipGraphNode_t memsetNode;
-
+  hipGraph_t graph = nullptr;
   HIP_CHECK(hipGraphCreate(&graph, 0));
-  HIP_CHECK(hipStreamCreate(&streamForGraph));
 
-  hipMemsetParams mParams{};
-  memset(&mParams, 0, sizeof(mParams));
-  mParams.dst = reinterpret_cast<void*>(devData);
-  mParams.value = val;
-  mParams.pitch = 0;
-  mParams.elementSize = sizeof(char);
-  mParams.width = Nbytes;
-  mParams.height = 1;
-  HIP_CHECK(hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0, &mParams));
+  hipGraphNode_t node = nullptr;
+  LinearAllocGuard<TestType> initial_alloc(LinearAllocs::hipMalloc, 2 * sizeof(TestType));
 
-  std::vector<hipGraphNode_t> dependencies;
-  dependencies.push_back(memsetNode);
+  hipMemsetParams initial_params = {};
+  initial_params.dst = initial_alloc.ptr();
+  initial_params.elementSize = sizeof(TestType);
+  initial_params.width = 2;
+  initial_params.height = 1;
+  HIP_CHECK(hipGraphAddMemsetNode(&node, graph, nullptr, 0, &initial_params));
 
-  HIP_CHECK(hipGraphInstantiate(&graphExec, graph, nullptr, nullptr, 0));
+  hipGraphExec_t graph_exec = nullptr;
+  HIP_CHECK(hipGraphInstantiate(&graph_exec, graph, nullptr, nullptr, 0));
 
-  SECTION("Pass hGraphExec as nullptr") {
-    ret = hipGraphExecMemsetNodeSetParams(nullptr, memsetNode, &mParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass hGraphNode as nullptr") {
-    ret = hipGraphExecMemsetNodeSetParams(graphExec, nullptr, &mParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass different hGraphNode which was not used in graphExec") {
-    hipGraphNode_t memsetNode1{};
-    ret = hipGraphExecMemsetNodeSetParams(graphExec, memsetNode1, &mParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass different Graph which was not used in graphExec") {
-    hipGraph_t graph1;
-    HIP_CHECK(hipGraphCreate(&graph1, 0));
-    HIP_CHECK(hipGraphAddMemsetNode(&memsetNode, graph1, nullptr, 0, &mParams));
-    ret = hipGraphExecMemsetNodeSetParams(graphExec, memsetNode, &mParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-    HIP_CHECK(hipGraphDestroy(graph1));
-  }
-  SECTION("Pass pNodeParams as nullptr") {
-    ret = hipGraphExecMemsetNodeSetParams(graphExec, memsetNode, nullptr);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-#if HT_NVIDIA
-  SECTION("Pass pNodeParams as empty structure object") {
-    hipMemsetParams mParmTemp{};
-    ret = hipGraphExecMemsetNodeSetParams(graphExec, memsetNode, &mParmTemp);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-#endif
-  SECTION("Pass hipMemsetParams::dst as nullptr") {
-    mParams.dst = nullptr;
-    ret = hipGraphExecMemsetNodeSetParams(graphExec, memsetNode, &mParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-#if HT_NVIDIA
-  SECTION("Pass hipMemsetParams::element size other than 1, 2, or 4") {
-    mParams.dst = reinterpret_cast<void*>(devData);
-    mParams.elementSize = 9;
-    ret = hipGraphExecMemsetNodeSetParams(graphExec, memsetNode, &mParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass hipMemsetParams::height as zero") {
-    mParams.elementSize = sizeof(char);
-    mParams.height = 0;
-    ret = hipGraphExecMemsetNodeSetParams(graphExec, memsetNode, &mParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-#endif
+  LinearAllocGuard2D<TestType> alloc(width, 1);
+  constexpr TestType set_value = 42;
+  hipMemsetParams params = {};
+  params.dst = alloc.ptr();
+  params.elementSize = sizeof(TestType);
+  params.width = width;
+  params.height = 1;
+  params.value = set_value;
+  HIP_CHECK(hipGraphExecMemsetNodeSetParams(graph_exec, node, &params));
 
-  free(hOutputData);
-  HIP_CHECK(hipFree(devData));
-  HIP_CHECK(hipGraphExecDestroy(graphExec));
+  hipMemsetParams retrieved_params = {};
+  HIP_CHECK(hipGraphMemsetNodeGetParams(node, &retrieved_params));
+  REQUIRE(initial_params.dst == retrieved_params.dst);
+  REQUIRE(initial_params.elementSize == retrieved_params.elementSize);
+  REQUIRE(initial_params.width == retrieved_params.width);
+  REQUIRE(initial_params.height == retrieved_params.height);
+  REQUIRE(initial_params.pitch == retrieved_params.pitch);
+  REQUIRE(initial_params.value == retrieved_params.value);
+
+  HIP_CHECK(hipGraphLaunch(graph_exec, hipStreamPerThread));
+  HIP_CHECK(hipStreamSynchronize(hipStreamPerThread));
+
+  HIP_CHECK(hipGraphExecDestroy(graph_exec));
   HIP_CHECK(hipGraphDestroy(graph));
-  HIP_CHECK(hipStreamDestroy(streamForGraph));
+
+  LinearAllocGuard<TestType> buffer(LinearAllocs::hipHostMalloc, width * sizeof(TestType));
+  HIP_CHECK(hipMemcpy2D(buffer.ptr(), width * sizeof(TestType), alloc.ptr(), alloc.pitch(),
+                        width * sizeof(TestType), 1, hipMemcpyDeviceToHost));
+  ArrayFindIfNot(buffer.ptr(), set_value, width);
 }
 
-/* Test verifies hipGraphExecMemsetNodeSetParams API Functional scenarios.
+/**
+ * Test Description
+ * ------------------------
+ *  - Verify API behaviour with invalid arguments:
+ *    -# When pGraphExec is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When node is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams dst data member is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams elementSize data member is different from 1, 2, and 4
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams width data member is zero
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams width data member is larger than the allocated memory region
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams height data member is zero
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams pitch data memebr is less than width when height is more than 1
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams pitch * pMemsetParams height is larger than the allocated memory region
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pNodeParams dst data member holds a pointer to memory allocated on a device different from the one
+ *       the original dst was allocated on.
+ *      - Multi-device
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecMemsetNodeSetParams.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipGraphExecMemsetNodeSetParams_Functional") {
-  constexpr size_t N = 1024;
-  constexpr size_t Nbytes = N * sizeof(char);
-  constexpr size_t val = 0;
-  constexpr size_t updateVal = 2;
-  char *devData, *devData1, *hOutputData, *hOutputData1;
+TEST_CASE("Unit_hipGraphExecMemsetNodeSetParams_Negative_Parameters") {
+  using namespace std::placeholders;
 
-  HIP_CHECK(hipMalloc(&devData, Nbytes));
-  HIP_CHECK(hipMalloc(&devData1, Nbytes));
-  hOutputData = reinterpret_cast<char *>(malloc(Nbytes));
-  REQUIRE(hOutputData != nullptr);
-  memset(hOutputData, updateVal,  Nbytes);
-  hOutputData1 = reinterpret_cast<char *>(malloc(Nbytes));
-  REQUIRE(hOutputData1 != nullptr);
-  memset(hOutputData1, 0,  Nbytes);
-
-  hipGraph_t graph;
-  hipGraphExec_t graphExec;
-  hipStream_t streamForGraph;
-  hipGraphNode_t memsetNode;
-
+  hipGraph_t graph = nullptr;
   HIP_CHECK(hipGraphCreate(&graph, 0));
-  HIP_CHECK(hipStreamCreate(&streamForGraph));
 
-  hipMemsetParams memsetParams{};
-  memset(&memsetParams, 0, sizeof(memsetParams));
-  memsetParams.dst = reinterpret_cast<void*>(devData);
-  memsetParams.value = val;
-  memsetParams.pitch = 0;
-  memsetParams.elementSize = sizeof(char);
-  memsetParams.width = Nbytes;
-  memsetParams.height = 1;
-  HIP_CHECK(hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0,
-                                  &memsetParams));
+  LinearAllocGuard<int> alloc(LinearAllocs::hipMalloc, 4 * sizeof(int));
+  hipMemsetParams params = {};
+  params.dst = alloc.ptr();
+  params.elementSize = sizeof(*alloc.ptr());
+  params.width = 1;
+  params.height = 1;
+  params.value = 42;
 
-  std::vector<hipGraphNode_t> dependencies;
-  dependencies.push_back(memsetNode);
+  hipGraphNode_t node = nullptr;
+  HIP_CHECK(hipGraphAddMemsetNode(&node, graph, nullptr, 0, &params))
 
-  HIP_CHECK(hipGraphInstantiate(&graphExec, graph, nullptr, nullptr, 0));
+  hipGraphExec_t graph_exec = nullptr;
+  HIP_CHECK(hipGraphInstantiate(&graph_exec, graph, nullptr, nullptr, 0));
 
-  memset(&memsetParams, 0, sizeof(memsetParams));
-  memsetParams.dst = reinterpret_cast<void*>(devData1);
-  memsetParams.value = updateVal;
-  memsetParams.pitch = 0;
-  memsetParams.elementSize = sizeof(char);
-  memsetParams.width = Nbytes;
-  memsetParams.height = 1;
+  SECTION("pGraphExec == nullptr") {
+    HIP_CHECK_ERROR(hipGraphExecMemsetNodeSetParams(nullptr, node, &params), hipErrorInvalidValue);
+  }
 
-  REQUIRE(hipSuccess == hipGraphExecMemsetNodeSetParams(graphExec, memsetNode,
-                                                        &memsetParams));
-  HIP_CHECK(hipGraphLaunch(graphExec, streamForGraph));
-  HIP_CHECK(hipStreamSynchronize(streamForGraph));
+  SECTION("node == nullptr") {
+    HIP_CHECK_ERROR(hipGraphExecMemsetNodeSetParams(graph_exec, nullptr, &params),
+                    hipErrorInvalidValue);
+  }
 
-  HIP_CHECK(hipMemcpy(hOutputData1, devData1, Nbytes, hipMemcpyDeviceToHost));
-  HipTest::checkArray(hOutputData, hOutputData1, Nbytes, 1);
+  MemsetCommonNegative(std::bind(hipGraphExecMemsetNodeSetParams, graph_exec, node, _1), params);
 
-  free(hOutputData);
-  free(hOutputData1);
-  HIP_CHECK(hipFree(devData));
-  HIP_CHECK(hipFree(devData1));
-  HIP_CHECK(hipGraphExecDestroy(graphExec));
+  SECTION("Changing dst allocation device") {
+    if (HipTest::getDeviceCount() < 2) {
+      HipTest::HIP_SKIP_TEST("Test requires two connected GPUs");
+      return;
+    }
+    HIP_CHECK(hipSetDevice(1));
+    LinearAllocGuard<int> new_alloc(LinearAllocs::hipMalloc, 4 * sizeof(int));
+    params.dst = new_alloc.ptr();
+    HIP_CHECK_ERROR(hipGraphExecMemsetNodeSetParams(graph_exec, node, &params),
+                    hipErrorInvalidValue);
+  }
+
+  HIP_CHECK(hipGraphExecDestroy(graph_exec));
   HIP_CHECK(hipGraphDestroy(graph));
-  HIP_CHECK(hipStreamDestroy(streamForGraph));
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Verify that a 2D node cannot be updated.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecMemsetNodeSetParams.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipGraphExecMemsetNodeSetParams_Negative_Updating_Non1D_Node") {
+  hipGraph_t graph = nullptr;
+  HIP_CHECK(hipGraphCreate(&graph, 0));
+
+  LinearAllocGuard2D<int> alloc(2, 2);
+  hipMemsetParams params = {};
+  params.dst = alloc.ptr();
+  params.elementSize = sizeof(*alloc.ptr());
+  params.width = 1;
+  params.height = 2;
+  params.pitch = alloc.pitch();
+  params.value = 42;
+
+  hipGraphNode_t node = nullptr;
+  HIP_CHECK(hipGraphAddMemsetNode(&node, graph, nullptr, 0, &params))
+
+  hipGraphExec_t graph_exec = nullptr;
+  HIP_CHECK(hipGraphInstantiate(&graph_exec, graph, nullptr, nullptr, 0));
+
+  params.width = 2;
+  HIP_CHECK_ERROR(hipGraphExecMemsetNodeSetParams(graph_exec, node, &params), hipErrorInvalidValue);
+
+  HIP_CHECK(hipGraphExecDestroy(graph_exec));
+  HIP_CHECK(hipGraphDestroy(graph));
 }

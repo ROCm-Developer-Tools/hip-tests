@@ -18,198 +18,200 @@ THE SOFTWARE.
 */
 
 #include <hip_test_common.hh>
+#include <hip_test_defgroups.hh>
 #include <hip_test_kernels.hh>
 
-constexpr unsigned blocks = 512;
-constexpr unsigned threadsPerBlock = 256;
-constexpr size_t N = 100000;
-constexpr size_t Nbytes = N * sizeof(float);
+#include "stream_capture_common.hh"
 
 /**
-API - hipStreamIsCapturing
-Negative Testcase Scenarios : Negative
-  1) Check capture status with null pCaptureStatus.
-  2) Check capture status with hipStreamPerThread and null pCaptureStatus.
-Functional Testcase Scenarios :
-  1) Check capture status with null stream.
-  2) Check capture status with hipStreamPerThread.
-  3) Functional : Create a stream, call api and check
-     capture status is hipStreamCaptureStatusNone.
-  4) Functional : Start capturing a stream and check
-     capture status returned as hipStreamCaptureStatusActive.
-  5) Functional : Stop capturing a stream and check
-     status is returned as hipStreamCaptureStatusNone.
-  6) Functional : Use hipStreamPerThread, call api and check
-     capture status is hipStreamCaptureStatusNone.
-  7) Functional : Start capturing using hipStreamPerThread and check
-     capture status returned as hipStreamCaptureStatusActive.
-  8) Functional : Stop capturing using hipStreamPerThread and check
-     status is returned as hipStreamCaptureStatusNone.
-*/
+ * @addtogroup hipStreamIsCapturing hipStreamIsCapturing
+ * @{
+ * @ingroup GraphTest
+ * `hipStreamIsCapturing(hipStream_t stream, hipStreamCaptureStatus
+ * *pCaptureStatus)` - Get stream's capture state.
+ */
 
-
-TEST_CASE("Unit_hipStreamIsCapturing_Negative") {
-  hipError_t ret;
-  hipStream_t stream{};
+/**
+ * Test Description
+ * ------------------------
+ *  - Test to verify API behavior with invalid arguments:
+ *    -# When capture status is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When capture status is checked on null stream
+ *      - Expected output: return `hipErrorStreamCaptureImplicit`
+ *    -# When stream is uninitialized
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *    - catch\unit\graph\hipStreamIsCapturing.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipStreamIsCapturing_Negative_Parameters") {
+  const auto stream_type = GENERATE(Streams::perThread, Streams::created);
+  StreamGuard stream_guard(stream_type);
+  hipStream_t stream = stream_guard.stream();
 
   SECTION("Check capture status with null pCaptureStatus.") {
-    ret = hipStreamIsCapturing(stream, nullptr);
-    REQUIRE(hipErrorInvalidValue == ret);
+    HIP_CHECK_ERROR(hipStreamIsCapturing(stream, nullptr), hipErrorInvalidValue);
   }
-  SECTION("Check capture status with hipStreamPerThread and"
-                 " nullptr as pCaptureStatus.") {
-    ret = hipStreamIsCapturing(hipStreamPerThread, nullptr);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-}
 
-TEST_CASE("Unit_hipStreamIsCapturing_Functional_Basic") {
-  hipStreamCaptureStatus cStatus;
+  SECTION("Check capture status when checked on null stream") {
+    hipStreamCaptureStatus cStatus;
+    hipGraph_t graph{nullptr};
 
-  SECTION("Check capture status with null stream.") {
-    HIP_CHECK(hipStreamIsCapturing(nullptr, &cStatus));
-    REQUIRE(hipStreamCaptureStatusNone == cStatus);
+    HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
+    HIP_CHECK_ERROR(hipStreamIsCapturing(nullptr, &cStatus), hipErrorStreamCaptureImplicit);
+    HIP_CHECK(hipStreamEndCapture(stream, &graph));
+    HIP_CHECK(hipGraphDestroy(graph));
   }
-  SECTION("Check capture status with hipStreamPerThread.") {
-    HIP_CHECK(hipStreamIsCapturing(hipStreamPerThread, &cStatus));
-    REQUIRE(hipStreamCaptureStatusNone == cStatus);
+#if HT_NVIDIA  // EXSWHTEC-216
+  SECTION("Check capture status when stream is uninitialized") {
+    hipStreamCaptureStatus cStatus;
+
+    constexpr auto InvalidStream = [] {
+      StreamGuard sg(Streams::created);
+      return sg.stream();
+    };
+
+    HIP_CHECK_ERROR(hipStreamIsCapturing(InvalidStream(), &cStatus), hipErrorContextIsDestroyed);
   }
+#endif
 }
 
 /**
-Testcase Scenarios :
-  1) Functional : Create a stream, call api and check
-     capture status is hipStreamCaptureStatusNone.
-  2) Functional : Start capturing a stream and check
-     capture status returned as hipStreamCaptureStatusActive.
-  3) Functional : Stop capturing a stream and check
-     status is returned as hipStreamCaptureStatusNone.
-*/
-
-TEST_CASE("Unit_hipStreamIsCapturing_Functional") {
-  float *A_d, *C_d;
-  float *A_h, *C_h;
-  hipStream_t stream{nullptr};
-  hipGraph_t graph{nullptr};
+ * Test Description
+ * ------------------------
+ *  - Initiate simple API call for stream capture status on custom
+ *    stream/hipStreamPerThread.
+ * Test source
+ * ------------------------
+ *  - catch\unit\graph\hipStreamIsCapturing.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipStreamIsCapturing_Positive_Basic") {
   hipStreamCaptureStatus cStatus;
+  const auto stream_type = GENERATE(Streams::perThread, Streams::created);
+  StreamGuard stream_guard(stream_type);
+  hipStream_t stream = stream_guard.stream();
 
-  A_h = reinterpret_cast<float*>(malloc(Nbytes));
-  C_h = reinterpret_cast<float*>(malloc(Nbytes));
-  REQUIRE(A_h != nullptr);
-  REQUIRE(C_h != nullptr);
+  HIP_CHECK(hipStreamIsCapturing(stream, &cStatus));
+  REQUIRE(hipStreamCaptureStatusNone == cStatus);
+}
 
-  // Fill with Phi + i
-  for (size_t i = 0; i < N; i++) {
-      A_h[i] = 1.618f + i;
-  }
+void checkStreamCaptureStatus(hipStreamCaptureMode mode, hipStream_t stream) {
+  constexpr size_t N = 1000000;
 
-  HIP_CHECK(hipMalloc(&A_d, Nbytes));
-  HIP_CHECK(hipMalloc(&C_d, Nbytes));
-  REQUIRE(A_d != nullptr);
-  REQUIRE(C_d != nullptr);
-  HIP_CHECK(hipStreamCreate(&stream));
+  hipStreamCaptureStatus cStatus;
+  size_t Nbytes = N * sizeof(float);
+  hipGraph_t graph{nullptr};
+  hipGraphExec_t graphExec{nullptr};
 
-  SECTION("Check the stream capture status before start capturing.") {
-    HIP_CHECK(hipStreamIsCapturing(stream, &cStatus));
-    REQUIRE(hipStreamCaptureStatusNone == cStatus);
-  }
+  LinearAllocGuard<float> A_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> B_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> A_d(LinearAllocs::hipMalloc, Nbytes);
 
-  HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
+  // Status is none before capture begins
+  HIP_CHECK(hipStreamIsCapturing(stream, &cStatus));
+  REQUIRE(hipStreamCaptureStatusNone == cStatus);
 
-  SECTION("Start capturing a stream and check the status.") {
-    HIP_CHECK(hipStreamIsCapturing(stream, &cStatus));
-    REQUIRE(hipStreamCaptureStatusActive == cStatus);
-  }
+  HIP_CHECK(hipStreamBeginCapture(stream, mode));
+  captureSequenceSimple(A_h.host_ptr(), A_d.ptr(), B_h.host_ptr(), N, stream);
 
-  HIP_CHECK(hipMemcpyAsync(A_d, A_h, Nbytes, hipMemcpyHostToDevice, stream));
-
-  HIP_CHECK(hipMemsetAsync(C_d, 0, Nbytes, stream));
-  hipLaunchKernelGGL(HipTest::vector_square, dim3(blocks),
-                              dim3(threadsPerBlock), 0, stream, A_d, C_d, N);
-  HIP_CHECK(hipMemcpyAsync(C_h, C_d, Nbytes, hipMemcpyDeviceToHost, stream));
+  // Status is active during stream capture
+  HIP_CHECK(hipStreamIsCapturing(stream, &cStatus));
+  REQUIRE(hipStreamCaptureStatusActive == cStatus);
 
   HIP_CHECK(hipStreamEndCapture(stream, &graph));
+  REQUIRE(graph != nullptr);
 
-  SECTION("Stop capturing a stream and check the status.") {
-    HIP_CHECK(hipStreamIsCapturing(stream, &cStatus));
-    REQUIRE(hipStreamCaptureStatusNone == cStatus);
+  // Status is none after capture ends
+  HIP_CHECK(hipStreamIsCapturing(stream, &cStatus));
+  REQUIRE(hipStreamCaptureStatusNone == cStatus);
+
+  HIP_CHECK(hipGraphInstantiate(&graphExec, graph, nullptr, nullptr, 0));
+  REQUIRE(graphExec != nullptr);
+
+  // Replay the recorded sequence multiple times
+  for (int i = 0; i < kLaunchIters; i++) {
+    std::fill_n(A_h.host_ptr(), N, static_cast<float>(i));
+    HIP_CHECK(hipGraphLaunch(graphExec, stream));
+    HIP_CHECK(hipStreamSynchronize(stream));
+    ArrayFindIfNot(B_h.host_ptr(), static_cast<float>(i), N);
   }
 
-  HIP_CHECK(hipStreamSynchronize(stream));
+  HIP_CHECK(hipGraphExecDestroy(graphExec))
   HIP_CHECK(hipGraphDestroy(graph));
-  HIP_CHECK(hipStreamDestroy(stream));
-
-  free(A_h);
-  free(C_h);
-  HIP_CHECK(hipFree(A_d));
-  HIP_CHECK(hipFree(C_d));
 }
 
 /**
-Testcase Scenarios :
-  1) Functional : Use hipStreamPerThread, call api and check
-     capture status is hipStreamCaptureStatusNone.
-  2) Functional : Start capturing using hipStreamPerThread and check
-     capture status returned as hipStreamCaptureStatusActive.
-  3) Functional : Stop capturing using hipStreamPerThread and check
-     status is returned as hipStreamCaptureStatusNone.
-*/
+ * Test Description
+ * ------------------------
+ *  - Initiate stream capture with different modes on custom
+ *    stream/hipStreamPerThread
+ *  - Checks that capture status is correct in different capturing phases.
+ * Test source
+ * ------------------------
+ *  - catch\unit\graph\hipStreamIsCapturing.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipStreamIsCapturing_Positive_Functional") {
+  const auto stream_type = GENERATE(Streams::perThread, Streams::created);
+  StreamGuard stream_guard(stream_type);
+  hipStream_t stream = stream_guard.stream();
 
-TEST_CASE("Unit_hipStreamIsCapturing_hipStreamPerThread") {
-  float *A_d, *C_d;
-  float *A_h, *C_h;
-  hipGraph_t graph{nullptr};
+  const hipStreamCaptureMode captureMode = GENERATE(
+      hipStreamCaptureModeGlobal, hipStreamCaptureModeThreadLocal, hipStreamCaptureModeRelaxed);
+
+  checkStreamCaptureStatus(captureMode, stream);
+}
+
+static void thread_func(hipStream_t stream) {
   hipStreamCaptureStatus cStatus;
+  HIP_CHECK(hipStreamIsCapturing(stream, &cStatus));
+  REQUIRE(hipStreamCaptureStatusActive == cStatus);
+}
 
-  A_h = reinterpret_cast<float*>(malloc(Nbytes));
-  C_h = reinterpret_cast<float*>(malloc(Nbytes));
-  REQUIRE(A_h != nullptr);
-  REQUIRE(C_h != nullptr);
+/**
+ * Test Description
+ * ------------------------
+ *  - Initiate stream capture with different modes on custom
+ *    stream/hipStreamPerThread.
+ *  - Checks that capture status is correct when status
+ *    is checked in a separate thread.
+ * Test source
+ * ------------------------
+ *  - catch\unit\graph\hipStreamIsCapturing.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipStreamIsCapturing_Positive_Thread") {
+  constexpr size_t N = 1000000;
+  size_t Nbytes = N * sizeof(float);
 
-  // Fill with Phi + i
-  for (size_t i = 0; i < N; i++) {
-      A_h[i] = 1.618f + i;
-  }
+  hipGraph_t graph{nullptr};
+  StreamGuard stream_guard(Streams::created);
+  hipStream_t stream = stream_guard.stream();
 
-  HIP_CHECK(hipMalloc(&A_d, Nbytes));
-  HIP_CHECK(hipMalloc(&C_d, Nbytes));
-  REQUIRE(A_d != nullptr);
-  REQUIRE(C_d != nullptr);
+  LinearAllocGuard<float> A_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> B_h(LinearAllocs::malloc, Nbytes);
+  LinearAllocGuard<float> A_d(LinearAllocs::hipMalloc, Nbytes);
 
-  SECTION("Check the stream capture status before start capturing.") {
-    HIP_CHECK(hipStreamIsCapturing(hipStreamPerThread, &cStatus));
-    REQUIRE(hipStreamCaptureStatusNone == cStatus);
-  }
+  const hipStreamCaptureMode captureMode = hipStreamCaptureModeGlobal;
 
-  HIP_CHECK(hipStreamBeginCapture(hipStreamPerThread,
-                                  hipStreamCaptureModeGlobal));
+  HIP_CHECK(hipStreamBeginCapture(stream, captureMode));
+  captureSequenceSimple(A_h.host_ptr(), A_d.ptr(), B_h.host_ptr(), N, stream);
 
-  SECTION("Start capturing a stream and check the status.") {
-    HIP_CHECK(hipStreamIsCapturing(hipStreamPerThread, &cStatus));
-    REQUIRE(hipStreamCaptureStatusActive == cStatus);
-  }
+  std::thread t(thread_func, stream);
+  t.join();
 
-  HIP_CHECK(hipMemcpyAsync(A_d, A_h, Nbytes, hipMemcpyHostToDevice,
-                                             hipStreamPerThread));
-
-  HIP_CHECK(hipMemsetAsync(C_d, 0, Nbytes, hipStreamPerThread));
-  hipLaunchKernelGGL(HipTest::vector_square, dim3(blocks),
-           dim3(threadsPerBlock), 0, hipStreamPerThread, A_d, C_d, N);
-  HIP_CHECK(hipMemcpyAsync(C_h, C_d, Nbytes, hipMemcpyDeviceToHost,
-                                             hipStreamPerThread));
-
-  HIP_CHECK(hipStreamEndCapture(hipStreamPerThread, &graph));
-
-  SECTION("Stop capturing a stream and check the status.") {
-    HIP_CHECK(hipStreamIsCapturing(hipStreamPerThread, &cStatus));
-    REQUIRE(hipStreamCaptureStatusNone == cStatus);
-  }
-
-  HIP_CHECK(hipStreamSynchronize(hipStreamPerThread));
+  HIP_CHECK(hipStreamEndCapture(stream, &graph));
   HIP_CHECK(hipGraphDestroy(graph));
-
-  free(A_h);
-  free(C_h);
-  HIP_CHECK(hipFree(A_d));
-  HIP_CHECK(hipFree(C_d));
 }

@@ -16,23 +16,34 @@ LIABILITY, WHETHER INN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/**
-Testcase Scenarios :
-Functional ::
-1) Pass different types of valid nodes and get the corresponding type of the node
-2) Add Graph node, destroy the graph node and add the same node of different type.
-   hipGraphNodeGetTye should return the new type
-3) Add graph node, overwrite new type to the same graph node and trigger
-   hipGraphNodeGetType which should return the updated type.
-Negative ::
-1) Pass nullptr to graph node
-2) Pass nullptr  to node type
-3) Pass invalid to graph node
-*/
+
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 
+/**
+ * @addtogroup hipGraphNodeGetType hipGraphNodeGetType
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphNodeGetType(hipGraphNode_t node, hipGraphNodeType* pType)` -
+ * Returns a node's type.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When graph node handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When node is not initialized
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphNodeGetType.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphNodeGetType_Negative") {
   SECTION("Pass nullptr to graph node") {
     hipGraphNodeType nodeType;
@@ -54,6 +65,19 @@ TEST_CASE("Unit_hipGraphNodeGetType_Negative") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates different functionalitie:
+ *    -# When the node is deleted and different node is assigned.
+ *    -# When the graph node is overridden.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphNodeGetType.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphNodeGetType_Functional") {
   constexpr size_t N = 1024;
   hipGraphNodeType nodeType;
@@ -90,8 +114,22 @@ TEST_CASE("Unit_hipGraphNodeGetType_Functional") {
   HIP_CHECK(hipStreamDestroy(stream));
   HIP_CHECK(hipEventDestroy(event));
 }
+
 /**
- * Functional Test for hipGraphNodeGetType API
+ * Test Description
+ * ------------------------
+ *  - Gets different types of graph nodes:
+ *    -# When node is `hipGraphNodeTypeMemcpy`
+ *    -# When node is `hipGraphNodeTypeKernel`
+ *    -# When node is `hipGraphNodeTypeEmpty`
+ *    -# When node is `hipGraphNodeTypeWaitEvent`
+ *    -# When node is `hipGraphNodeTypeEventRecord`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphNodeGetType.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGraphNodeGetType_NodeType") {
   constexpr size_t N = 1024;

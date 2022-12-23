@@ -17,40 +17,48 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-Testcase Scenarios of hipGraphNodeFindInClone API:
-
-Negative:
-
-1) Pass nullptr to graph node
-2) pass nullptr to original graph node
-3) pass nullptr to clonedGraph
-4) Pass original graph in place of the cloned graph
-5) Pass invalid originalNode
-6) Destroy the graph node in the original graph
-   and try to get the deleted graph node
-   from the cloned graph
-7) Clone the graph,Add node to Original graph
-   and try to find the original node in the cloned graph
-
-
-Functional:
-
-1) Get the graph node from the cloned graph corresponding to the original node
-2) Create and clone the graph, modify the original graph and clone the graph again,
-   then try to find the newly added graph node  from the cloned graph
-
-*/
-
 #include<hip/hip_runtime_api.h>
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 
+/**
+ * @addtogroup hipGraphNodeFindInClone hipGraphNodeFindInClone
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphNodeFindInClone(hipGraphNode_t* pNode,
+ *  hipGraphNode_t originalNode, hipGraph_t clonedGraph)` -
+ * Finds a cloned version of a node.
+ */
 
-/* This test covers the negative scenarios of
-   hipGraphNodeFindInClone API */
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When cloned graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When original graph node handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When output pointer to the graph node is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph is not cloned
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph node that is to be found is destroyed
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When original node is not initialized
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When find node in the cloned graph which is present only
+ *      in the original graph
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphNodeFindInClone.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphNodeFindInClone_Negative") {
   hipGraph_t graph;
   hipGraph_t clonedgraph;
@@ -231,6 +239,19 @@ void hipGraphNodeFindInClone_Func(bool ModifyOrigGraph = false) {
   HIP_CHECK(hipGraphDestroy(clonedgraph));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates basic functionalities:
+ *    -# Finds the node from the original graph in the cloned graph.
+ *    -# Finds the node from the modified original graph in the cloned graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphNodeFindInClone.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphNodeFindInClone_Functional") {
   SECTION("hipGraphNodeFindInClone Basic Functionality") {
     hipGraphNodeFindInClone_Func();

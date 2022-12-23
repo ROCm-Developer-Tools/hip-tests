@@ -17,15 +17,13 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
- 1) Execution Without HIPGraphs : Regular procedure of using stream with async api calls.
- 2) Manual HIPGraph : Manual procedure of adding nodes to graphs and mapping dependencies.
- 3) HIPGraphs Using StreamCapture : Capturing sequence of operations in stream and launching
- graph with the nodes automatically added.
-*/
-
 #include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipGraphCreate hipGraphCreate
+ * @{
+ * @ingroup GraphTest
+ */
 
 #define THREADS_PER_BLOCK 512
 #define GRAPH_LAUNCH_ITERATIONS 1000
@@ -65,9 +63,7 @@ static void init_input(float* a, size_t size) {
   }
 }
 
-/**
- * Regular procedure of using stream with async api calls
- */
+// Regular procedure of using stream with async api calls
 static void hipWithoutGraphs(float* inputVec_h, float* inputVec_d,
   double* outputVec_d, double* result_d, size_t inputSize, size_t numOfBlocks) {
   hipStream_t stream1, stream2, stream3;
@@ -116,10 +112,10 @@ static void hipWithoutGraphs(float* inputVec_h, float* inputVec_d,
   REQUIRE(result_h_cpu == result_h);
 }
 
-/**
- * Capturing sequence of operations in stream and launching graph
- * with the nodes automatically added.
- */
+/*
+  Capturing sequence of operations in stream and launching graph
+  with the nodes automatically added.
+*/
 static void hipGraphsUsingStreamCapture(float* inputVec_h, float* inputVec_d,
                                  double* outputVec_d, double* result_d,
                                  size_t inputSize, size_t numOfBlocks) {
@@ -197,9 +193,7 @@ static void hipGraphsUsingStreamCapture(float* inputVec_h, float* inputVec_d,
   REQUIRE(result_h_cpu == result_h);
 }
 
-/**
- * Manual procedure of adding nodes to graphs and mapping dependencies.
- */
+// Manual procedure of adding nodes to graphs and mapping dependencies.
 static void hipGraphsManual(float* inputVec_h, float* inputVec_d,
          double* outputVec_d, double* result_d, size_t inputSize,
                                               size_t numOfBlocks) {
@@ -304,8 +298,18 @@ static void hipGraphsManual(float* inputVec_h, float* inputVec_d,
 }
 
 /**
- * Tests basic functionality of hipGraph APIs by
- * Execution Without HIPGraphs, Manual HIPGraph, HIPGraphs Using StreamCapture.
+ * Test Description
+ * ------------------------
+ *  - Validates several basic Graph functionalities:
+ *    -# Execution without Graphs: regular procedure of using stream with async API calls.
+ *    -# Manual Graphs: manual procedure of adding nodes to graphs and adding dependencies.
+ *    -# Graphs using Stream Capture: capturing sequence of operations in stream and launching.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraph.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGraph_BasicFunctional") {
   constexpr size_t size = 1 << 12;

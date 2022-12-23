@@ -17,22 +17,39 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-Functional -
-1) Create a graph and then used it for hipGraphInstantiate without adding any node to graph.
-Negative -
-1) Pass pGraphExec as null ptr and verify that api returns error code and doesn’t crash.
-2) Pass graph as null/invalid ptr and check if api returns error.
-3) Pass pGraphExec as un-initilize object and verify that api returns error code and doesn’t crash.
-4) Pass Graph as un-initilize and verify that api returns error code and doesn’t crash.
-*/
-
 #include <hip_test_common.hh>
 
-/* Test verifies hipGraphInstantiate API Negative scenarios.
+/**
+ * @addtogroup hipGraphInstantiate hipGraphInstantiate
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphInstantiate(hipGraphExec_t* pGraphExec, hipGraph_t graph,
+ * hipGraphNode_t* pErrorNode, char* pLogBuffer, size_t bufferSize)` -
+ * Creates an executable graph from a graph.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipGraph_BasicFunctional
  */
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the executable graph is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph is not initialized
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When executable graph is not initialized
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphInstantiate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphInstantiate_Negative") {
   hipError_t ret;
   hipGraphExec_t gExec{};
@@ -59,8 +76,17 @@ TEST_CASE("Unit_hipGraphInstantiate_Negative") {
   HIP_CHECK(hipGraphDestroy(graph));
 }
 
-/* Test verifies hipGraphInstantiate Basic scenarios.
-Create a graph and then used it for hipGraphInstantiate without adding any node to graph.
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates a graph.
+ *  - Instantiates an executable graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphInstantiate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGraphInstantiate_Basic") {
   hipGraph_t graph;

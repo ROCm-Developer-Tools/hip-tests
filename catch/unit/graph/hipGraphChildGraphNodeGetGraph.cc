@@ -16,29 +16,32 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios of hipGraphChildGraphNodeGetGraph API:
-
-Functional Scenarios:
-1. Get the child graph node from the original graph and execute it
-
-Negative Scenarios:
-1. Pass nullptr to graph
-2. Pass nullptr to graphnode
-3. Pass uninitialized graph node
-4. Pass orginial graph node instead of child graph node
-**/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 
-/*
-This testcase verifies the following scenario
-Create graph, add multiple child nodes and gets the
-graph of one of the child nodes using hipGraphChildGraphNodeGetGraph API
-executes it and validates the results
-*/
+/**
+ * @addtogroup hipGraphChildGraphNodeGetGraph hipGraphChildGraphNodeGetGraph
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphChildGraphNodeGetGraph(hipGraphNode_t node, hipGraph_t* pGraph)` -
+ * Gets a handle to the embedded graph of a child graph node.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates the graph.
+ *  - Adds multiple child nodes.
+ *  - Gets the graph of one of the child nodes.
+ *  - Executes it and validates the results.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphChildGraphNodeGetGraph.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphChildGraphNodeGetGraph_Functional") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -118,6 +121,25 @@ TEST_CASE("Unit_hipGraphChildGraphNodeGetGraph_Functional") {
 This testcase verifies the negative scenarios
 of hipGraphChildGraphNodeGetGraph API
 */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When child node handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When output pointer to the graph is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When passing parent instead of child graph node
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When child node is not initialized
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphChildGraphNodeGetGraph.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphChildGraphNodeGetGraph_Negative") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);

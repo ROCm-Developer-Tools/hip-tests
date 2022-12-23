@@ -17,32 +17,35 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-Testcase Scenarios of hipGraphClone API:
-
-Negative:
-
-1. Pass nullptr to cloned graph
-2. pass nullptr to original graph
-
-Functional:
-
-1. Clone the graph,Instantiate and execute the cloned graph
-2. Clone the graph and modify the original graph and ensure that the
-   cloned graph is not modified
-3. Create graph on one GPU device and clone it from peer GPU device
-4. Create graph in one thread and clone it from multiple threads.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 
+/**
+ * @addtogroup hipGraphClone hipGraphClone
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphClone(hipGraph_t* pGraphClone, hipGraph_t originalGraph)` -
+ * Clones a graph.
+ */
+
 #define NUM_THREADS 10
 
-/* This test covers the negative scenarios of
-   hipGraphClone API */
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the cloned graph is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When original graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphClone.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphClone_Negative") {
   SECTION("Passing nullptr to Cloned graph") {
     hipGraph_t graph;
@@ -56,10 +59,11 @@ TEST_CASE("Unit_hipGraphClone_Negative") {
     REQUIRE(hipGraphClone(&clonedGraph, nullptr) == hipErrorInvalidValue);
   }
 }
+
 /*
-This function creates the graph with dependencies
-then performs device context change and clones the cloned graph
-Executes the cloned graph and validates the result
+  This function creates the graph with dependencies
+  then performs device context change and clones the cloned graph
+  Executes the cloned graph and validates the result
 */
 void hipGraphClone_DeviceContextChange() {
   constexpr size_t N = 1024;
@@ -97,13 +101,14 @@ void hipGraphClone_DeviceContextChange() {
   HIP_CHECK(hipGraphDestroy(clonedgraph));
   HIP_CHECK(hipStreamDestroy(streamForGraph));
 }
+
 /*
-This function does the following
-1. Creates the graph with multiple dependencies
-   clones the graph and validates the result.
-2. Creates the graph, clones the graph and modifies
-   the existing graph and execute the cloned graph
-   to ensure that cloned graph is not modified
+  This function does the following
+  1. Creates the graph with multiple dependencies
+     clones the graph and validates the result.
+  2. Creates the graph, clones the graph and modifies
+     the existing graph and execute the cloned graph
+     to ensure that cloned graph is not modified
 */
 void hipGraphClone_Func(bool ModifyOrigGraph = false) {
   constexpr size_t N = 1024;
@@ -232,13 +237,20 @@ void hipGraphClone_Func(bool ModifyOrigGraph = false) {
   HIP_CHECK(hipStreamDestroy(streamForGraph));
 }
 
-/*
-This testcase verifies following scenarios
-1. Clones the graph and verify the result
-2. Clones the graph, Modify the original graph and
-   validate the result of the cloned graph
-3. Device context change for cloned graph
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Clones the graph and verifies the result.
+ *  - Clones the graph, modifies the original graph and validates
+ *    the result of the cloned graph.
+ *  - Changes device context for cloned graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphClone.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphClone_Functional") {
   SECTION("hipGraphClone Basic Functionality") {
     hipGraphClone_Func();
@@ -264,13 +276,23 @@ TEST_CASE("Unit_hipGraphClone_Functional") {
   }
 }
 
-/*
-This testcase creates the graph with dependencies
-then creates multiple threads and clones the graph
-in each thread and executes the cloned graph
-hipGraphClone is failing in CUDA in multi threaded
-scenario so excluded for nvidia
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates the graph with dependencies.
+ *  - Creates multiple threads.
+ *  - Clones the graph in eahc thread.
+ *  - Executes the cloned graph.
+ *  - This scenario is failing in CUDA.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphClone.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-threaded
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 #if HT_AMD
 TEST_CASE("Unit_hipGraphClone_MultiThreaded") {
   constexpr size_t N = 1024;

@@ -6,195 +6,200 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANNTY OF ANY KIND, EXPRESS OR
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER INN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-Functional -
-1) Add 1D memcpy node to graph and verify memcpy operation is success for all memcpy kinds(H2D, D2H and D2D).
- Memcpy nodes are added and assigned to default device.
-2) Allocate memory on default device(Dev 0), Perform memcpy operation for 1D arrays on Peer device(Dev 1) and
- verify the results.
-
-Negative -
-1) Pass pGraphNode as nullptr and check if api returns error.
-2) When graph is un-initialized argument(skipping graph creation), api should return error code.
-3) Passing pDependencies as nullptr, api should return success.
-4) When numDependencies is max(size_t) and pDependencies is not valid ptr, api expected to return error code.
-5) When pDependencies is nullptr, but numDependencies is non-zero, api expected to return error.
-6) When destination ptr  is nullptr, api expected to return error code.
-7) When source ptr is nullptr, api expected to return error code.
-8) If count is more than allocated size for source and destination ptr, error code is returned.
-9) If count is less than or equal to allocated size of source and destination ptr, api should return success.
-*/
+#include <functional>
 
 #include <hip_test_common.hh>
-#include <hip_test_checkers.hh>
+#include <hip_test_defgroups.hh>
+#include <memcpy1d_tests_common.hh>
 
-
-static void validateMemcpyNode1DArray(bool peerAccess) {
-  constexpr int SIZE{32};
-  int harray1D[SIZE]{};
-  int harray1Dres[SIZE]{};
-  hipGraph_t graph;
-  hipArray *devArray1, *devArray2;
-  hipGraphNode_t memcpyH2D, memcpyD2H, memcpyD2D;
-  constexpr int numBytes{SIZE * sizeof(int)};
-  hipStream_t streamForGraph;
-  hipGraphExec_t graphExec;
-
-  HIP_CHECK(hipSetDevice(0));
-  HIP_CHECK(hipStreamCreate(&streamForGraph));
-  HIP_CHECK(hipMalloc(&devArray1, numBytes));
-  HIP_CHECK(hipMalloc(&devArray2, numBytes));
-
-  // Initialize 1D object
-  for (int i = 0; i < SIZE; i++) {
-    harray1D[i] = i + 1;
-  }
-
-  HIP_CHECK(hipGraphCreate(&graph, 0));
-
-  // For peer access test, Memory is allocated on device(0)
-  // while memcpy nodes are allocated and assigned to peer device(1)
-  if (peerAccess) {
-    HIP_CHECK(hipSetDevice(1));
-  }
-
-  // Host to Device (harray1D -> devArray1)
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyH2D, graph, nullptr, 0,
-                     devArray1, harray1D, numBytes, hipMemcpyHostToDevice));
-
-  // Device to Device (devArray1 -> devArray2)
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyD2D, graph, &memcpyH2D, 1,
-                     devArray2, devArray1, numBytes, hipMemcpyDeviceToDevice));
-
-  // Device to host (devArray2 -> harray1Dres)
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyD2H, graph, &memcpyD2D, 1,
-                     harray1Dres, devArray2, numBytes, hipMemcpyDeviceToHost));
-
-  // Instantiate and launch the graph
-  HIP_CHECK(hipGraphInstantiate(&graphExec, graph, nullptr, nullptr, 0));
-  HIP_CHECK(hipGraphLaunch(graphExec, streamForGraph));
-  HIP_CHECK(hipStreamSynchronize(streamForGraph));
-
-  // Validate result
-  for (int i = 0; i < SIZE; i++) {
-    if (harray1D[i] != harray1Dres[i]) {
-      INFO("harray1D: " << harray1D[i] << " harray1Dres: " << harray1Dres[i]
-            << " mismatch at : " << i);
-      REQUIRE(false);
-    }
-  }
-  HIP_CHECK(hipGraphExecDestroy(graphExec));
-  HIP_CHECK(hipGraphDestroy(graph));
-  HIP_CHECK(hipStreamDestroy(streamForGraph));
-  HIP_CHECK(hipFree(devArray1));
-  HIP_CHECK(hipFree(devArray2));
-}
-
+#include "graph_tests_common.hh"
 
 /**
- * Functional Tests adds memcpy 1D nodes of types H2D, D2D and D2H to graph
- * and verifies execution sequence by launching graph.
- *
- * For Default device test: Memory allocations and memory operations
- * are performed from device(0).
- * For Peer device test: Memory allocations happen on device(0) and memcpy operations
- * are performed from device(1).
+ * @addtogroup hipGraphAddMemcpyNode1D hipGraphAddMemcpyNode1D
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphAddMemcpyNode1D(hipGraphNode_t *pGraphNode, hipGraph_t graph, const hipGraphNode_t
+ * *pDependencies, size_t numDependencies, void *dst, const void *src, size_t count, hipMemcpyKind
+ * kind)` - Creates a 1D memcpy node and adds it to a graph.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipGraph_BasicFunctional
  */
-TEST_CASE("Unit_hipGraphAddMemcpyNode1D_Functional") {
-  SECTION("Memcpy with 1D array on default device") {
-    validateMemcpyNode1DArray(false);
-  }
-
-  SECTION("Memcpy with 1D array on peer device") {
-    int numDevices{}, peerAccess{};
-    HIP_CHECK(hipGetDeviceCount(&numDevices));
-    if (numDevices > 1) {
-      HIP_CHECK(hipDeviceCanAccessPeer(&peerAccess, 1, 0));
-    }
-
-    if (!peerAccess) {
-      WARN("Skipping test as peer device access is not found!");
-      return;
-    }
-    validateMemcpyNode1DArray(true);
-  }
-}
-
-
 
 /**
- * Negative Test for API hipGraphAddMemcpyNode1D
+ * Test Description
+ * ------------------------
+ *  - Verify basic API behavior.
+ *  - A Memcpy1D node is created with parameters set according to the
+ *    test run
+ *  - The graph is run and the memcpy results are verified.
+ *  - The test is run for all possible memcpy directions, with both the corresponding memcpy
+ *    kind and hipMemcpyDefault, as well as half page and full page allocation sizes.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddMemcpyNode1D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipGraphAddMemcpyNode1D_Negative") {
-  constexpr size_t N = 1024;
-  constexpr size_t Nbytes = N * sizeof(int);
-  int *A_d, *A_h;
-  hipGraph_t graph;
-  hipGraphNode_t memcpyNode{};
-  hipError_t ret;
+TEST_CASE("Unit_hipGraphAddMemcpyNode1D_Positive_Basic") {
+  constexpr auto f = [](void* dst, void* src, size_t count, hipMemcpyKind direction) {
+    hipGraph_t graph = nullptr;
+    HIP_CHECK(hipGraphCreate(&graph, 0));
+    hipGraphNode_t node = nullptr;
+    HIP_CHECK(hipGraphAddMemcpyNode1D(&node, graph, nullptr, 0, dst, src, count, direction));
+    hipGraphExec_t graph_exec = nullptr;
+    HIP_CHECK(hipGraphInstantiate(&graph_exec, graph, nullptr, nullptr, 0));
+    HIP_CHECK(hipGraphLaunch(graph_exec, hipStreamPerThread));
+    HIP_CHECK(hipStreamSynchronize(hipStreamPerThread));
 
-  HIP_CHECK(hipMalloc(&A_d, Nbytes));
-  HIP_CHECK(hipMalloc(&A_h, Nbytes));
+    HIP_CHECK(hipGraphExecDestroy(graph_exec));
+    HIP_CHECK(hipGraphDestroy(graph));
+
+    return hipSuccess;
+  };
+
+#if HT_NVIDIA
+  MemcpyWithDirectionCommonTests<false>(f);
+#else
+  using namespace std::placeholders;
+
+  SECTION("Device to host") {
+    MemcpyDeviceToHostShell<false>(std::bind(f, _1, _2, _3, hipMemcpyDeviceToHost));
+  }
+
+  SECTION("Device to host with default kind") {
+    MemcpyDeviceToHostShell<false>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
+  }
+
+  SECTION("Host to device") {
+    MemcpyHostToDeviceShell<false>(std::bind(f, _1, _2, _3, hipMemcpyHostToDevice));
+  }
+
+  SECTION("Host to device with default kind") {
+    MemcpyHostToDeviceShell<false>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
+  }
+
+// Disabled on AMD due to defect - EXSWHTEC-209
+#if 0
+  SECTION("Host to host") {
+    MemcpyHostToHostShell<false>(std::bind(f, _1, _2, _3, hipMemcpyHostToHost));
+  }
+
+  SECTION("Host to host with default kind") {
+    MemcpyHostToHostShell<false>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
+  }
+#endif
+
+  SECTION("Device to device") {
+    SECTION("Peer access enabled") {
+      MemcpyDeviceToDeviceShell<false, true>(std::bind(f, _1, _2, _3, hipMemcpyDeviceToDevice));
+    }
+    SECTION("Peer access disabled") {
+      MemcpyDeviceToDeviceShell<false, false>(std::bind(f, _1, _2, _3, hipMemcpyDeviceToDevice));
+    }
+  }
+
+  SECTION("Device to device with default kind") {
+    SECTION("Peer access enabled") {
+      MemcpyDeviceToDeviceShell<false, true>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
+    }
+    SECTION("Peer access disabled") {
+      MemcpyDeviceToDeviceShell<false, false>(std::bind(f, _1, _2, _3, hipMemcpyDefault));
+    }
+  }
+#endif
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Verify API behaviour with invalid arguments:
+ *    -# When pGraphNode is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pDependencies is `nullptr` and numDependencies is not zero
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When a node in pDependencies originates from a different graph
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When numNodes is invalid
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When a node is duplicated in pDependencies
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When dst is nullptr
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When src is nullptr
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When kind is an invalid enum value
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidMemcpyDirection`
+ *    -# When count is zero
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When count is larger than dst allocation size
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When count is larger than src allocation size
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddMemcpyNode1D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipGraphAddMemcpyNode1D_Negative_Parameters") {
+  using namespace std::placeholders;
+  hipGraph_t graph = nullptr;
   HIP_CHECK(hipGraphCreate(&graph, 0));
+  hipGraphNode_t node = nullptr;
+  int src[2] = {}, dst[2] = {};
 
-  SECTION("Pass pGraphNode as nullptr") {
-    ret = hipGraphAddMemcpyNode1D(nullptr, graph,
-            nullptr, 0, A_d, A_h, Nbytes, hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
+  GraphAddNodeCommonNegativeTests(
+      std::bind(hipGraphAddMemcpyNode1D, _1, _2, _3, _4, dst, src, sizeof(dst), hipMemcpyDefault),
+      graph);
+
+  MemcpyWithDirectionCommonNegativeTests(
+      std::bind(hipGraphAddMemcpyNode1D, &node, graph, nullptr, 0, _1, _2, _3, _4), dst, src,
+      sizeof(dst), hipMemcpyDefault);
+
+// Disabled on AMD due to defect - EXSWHTEC-211
+#if HT_NVIDIA
+  SECTION("count == 0") {
+    HIP_CHECK_ERROR(
+        hipGraphAddMemcpyNode1D(&node, graph, nullptr, 0, dst, src, 0, hipMemcpyDefault),
+        hipErrorInvalidValue);
   }
-  SECTION("Pass graph as nullptr") {
-    ret = hipGraphAddMemcpyNode1D(&memcpyNode, nullptr,
-            nullptr, 0, A_d, A_h, Nbytes, hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
+#endif
+
+  SECTION("count larger than dst allocation size") {
+    LinearAllocGuard<int> dev_dst(LinearAllocs::hipMalloc, sizeof(int));
+    HIP_CHECK_ERROR(hipGraphAddMemcpyNode1D(&node, graph, nullptr, 0, dev_dst.ptr(), src,
+                                            sizeof(src), hipMemcpyDefault),
+                    hipErrorInvalidValue);
   }
-  SECTION("Pass pDependencies as nullptr") {
-    ret = hipGraphAddMemcpyNode1D(&memcpyNode, graph,
-            nullptr, 0, A_d, A_h, Nbytes, hipMemcpyHostToDevice);
-    REQUIRE(hipSuccess == ret);
+
+  SECTION("count larger than src allocation size") {
+    LinearAllocGuard<int> dev_src(LinearAllocs::hipMalloc, sizeof(int));
+    HIP_CHECK_ERROR(hipGraphAddMemcpyNode1D(&node, graph, nullptr, 0, dst, dev_src.ptr(),
+                                            sizeof(dst), hipMemcpyDefault),
+                    hipErrorInvalidValue);
   }
-  SECTION("Pass numDependencies is max and pDependencies is not valid ptr") {
-    ret = hipGraphAddMemcpyNode1D(&memcpyNode, graph,
-            nullptr, INT_MAX, A_d, A_h, Nbytes, hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass pDependencies as nullptr, but numDependencies is non-zero") {
-    ret = hipGraphAddMemcpyNode1D(&memcpyNode, graph,
-            nullptr, 9, A_d, A_h, Nbytes, hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass destination ptr as nullptr") {
-    ret = hipGraphAddMemcpyNode1D(&memcpyNode, graph,
-            nullptr, 0, nullptr, A_h, Nbytes, hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass source ptr as nullptr") {
-    ret = hipGraphAddMemcpyNode1D(&memcpyNode, graph,
-            nullptr, 0, A_d, nullptr, Nbytes, hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass count as more than allocated size for source ptr") {
-    ret = hipGraphAddMemcpyNode1D(&memcpyNode, graph,
-            nullptr, 0, A_d, A_h, Nbytes+10, hipMemcpyHostToDevice);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass count as less than allocated size for destination ptr") {
-    ret = hipGraphAddMemcpyNode1D(&memcpyNode, graph,
-            nullptr, 0, A_d, A_h, Nbytes-10, hipMemcpyHostToDevice);
-    REQUIRE(hipSuccess == ret);
-  }
-  HIP_CHECK(hipFree(A_d));
-  HIP_CHECK(hipFree(A_h));
+
   HIP_CHECK(hipGraphDestroy(graph));
 }

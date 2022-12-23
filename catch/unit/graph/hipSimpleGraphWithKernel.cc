@@ -17,12 +17,13 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
- Simple test to demonstrate usage of graph.
- Compares implementation with and without using graphs.
-*/
-
 #include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipGraphInstantiate hipGraphInstantiate
+ * @{
+ * @ingroup GraphTest
+ */
 
 #define N 1024 * 1024
 #define NSTEP 1000
@@ -146,7 +147,17 @@ static void hipTestWithoutGraph() {
 }
 
 /**
- * Simple test to demonstrate usage of graph.
+ * Test Description
+ * ------------------------
+ *  - Executes a simple kernel:
+ *    -# When graph is executed
+ *    -# When there is no graph
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipSimpleGraphWithKernel.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGraph_SimpleGraphWithKernel") {
   // Sections run test with and without graph.

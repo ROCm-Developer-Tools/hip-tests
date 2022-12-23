@@ -6,118 +6,140 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANNTY OF ANY KIND, EXPRESS OR
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER INN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Negative Testcase Scenarios for api hipGraphAddMemsetNode :
-1) Pass pGraphNode as nullptr and check if api returns error.
-2) Pass pGraphNode as un-initialize object and check.
-3) Pass Graph as nullptr and check if api returns error.
-4) Pass Graph as empty object(skipping graph creation), api should return error code.
-5) Pass pDependencies as nullptr, api should return success.
-6) Pass numDependencies is max(size_t) and pDependencies is not valid ptr, api expected to return error code.
-7) Pass pDependencies is nullptr, but numDependencies is non-zero, api expected to return error.
-8) Pass pMemsetParams as nullptr and check if api returns error code.
-9) Pass pMemsetParams as un-initialize object and check if api returns error code.
-10) Pass hipMemsetParams::dst as nullptr should return error code.
-11) Pass hipMemsetParams::element size other than 1, 2, or 4 and check api should return error code.
-12) Pass hipMemsetParams::height as zero and check api should return error code.
-*/
+#include <functional>
+#include <vector>
 
+#include <hip_test_defgroups.hh>
 #include <hip_test_common.hh>
+#include <resource_guards.hh>
+#include <utils.hh>
+
+#include "graph_memset_node_test_common.hh"
+#include "graph_tests_common.hh"
 
 /**
- * Negative Test for API hipGraphAddMemsetNode
+ * @addtogroup hipGraphAddMemsetNode hipGraphAddMemsetNode
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphAddMemsetNode(hipGraphNode_t *pGraphNode, hipGraph_t graph, const hipGraphNode_t
+ * *pDependencies, size_t numDependencies, const hipMemsetParams *pMemsetParams)` -
+ * Creates a memset node and adds it to a graph.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipGraph_BasicFunctional
  */
 
-TEST_CASE("Unit_hipGraphAddMemsetNode_Negative") {
-  hipError_t ret;
-  hipGraph_t graph;
-  hipGraphNode_t memsetNode;
-  char *devData;
+/**
+ * Test Description
+ * ------------------------
+ *  - Verify that all elements of destination memory are set to the correct value.
+ *  - The test is repeated for all valid element sizes(1, 2, 4), and several allocations of different
+ *    height and width.
+ *  - The test is repeated both on host and device.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddMemsetNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEMPLATE_TEST_CASE("Unit_hipGraphAddMemsetNode_Positive_Basic", "", uint8_t, uint16_t, uint32_t) {
+  const auto f = [](hipMemsetParams* params) {
+    hipGraph_t graph = nullptr;
+    HIP_CHECK(hipGraphCreate(&graph, 0));
 
-  HIP_CHECK(hipMalloc(&devData, 1024));
+    hipGraphNode_t node = nullptr;
+    HIP_CHECK(hipGraphAddMemsetNode(&node, graph, nullptr, 0, params));
+
+    hipGraphExec_t graph_exec = nullptr;
+    HIP_CHECK(hipGraphInstantiate(&graph_exec, graph, nullptr, nullptr, 0));
+
+    HIP_CHECK(hipGraphLaunch(graph_exec, hipStreamPerThread));
+    HIP_CHECK(hipStreamSynchronize(hipStreamPerThread));
+
+    HIP_CHECK(hipGraphExecDestroy(graph_exec));
+    HIP_CHECK(hipGraphDestroy(graph));
+
+    return hipSuccess;
+  };
+
+  GraphMemsetNodeCommonPositive<TestType>(f);
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Verify API behaviour with invalid arguments:
+ *    -# When pGraphNode is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pDependencies is `nullptr` and numDependencies is not zero
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When a node in pDependencies originates from a different graph
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When numNodes is invalid
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When a node is duplicated in pDependencies
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams dst data member is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams elementSize data member is different from 1, 2, and 4
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams width data member is zero
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams width data member is larger than the allocated memory region
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams height data member is zero
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams pitch data memebr is less than width when height is more than 1
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pMemsetParams pitch * pMemsetParams height is larger than the allocated memory region
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddMemsetNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipGraphAddMemsetNode_Negative_Parameters") {
+  using namespace std::placeholders;
+  hipGraph_t graph = nullptr;
   HIP_CHECK(hipGraphCreate(&graph, 0));
 
-  hipMemsetParams memsetParams{};
-  memset(&memsetParams, 0, sizeof(memsetParams));
-  memsetParams.dst = reinterpret_cast<void*>(devData);
-  memsetParams.value = 0;
-  memsetParams.pitch = 0;
-  memsetParams.elementSize = sizeof(char);
-  memsetParams.width = 1024;
-  memsetParams.height = 1;
+  LinearAllocGuard<int> alloc(LinearAllocs::hipMalloc, 4 * sizeof(int));
+  hipMemsetParams params = {};
+  params.dst = alloc.ptr();
+  params.elementSize = sizeof(*alloc.ptr());
+  params.width = 1;
+  params.height = 1;
+  params.value = 42;
 
-  SECTION("Pass pGraphNode as nullptr") {
-    ret = hipGraphAddMemsetNode(nullptr, graph, nullptr, 0, &memsetParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass pGraphNode as un-initialize object") {
-    hipGraphNode_t memsetNode_1;
-    ret = hipGraphAddMemsetNode(&memsetNode_1, graph,
-                                nullptr, 0, &memsetParams);
-    REQUIRE(hipSuccess == ret);
-  }
-  SECTION("Pass graph as nullptr") {
-    ret = hipGraphAddMemsetNode(&memsetNode, nullptr,
-                                nullptr, 0, &memsetParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass Graph as empty object") {
-    hipGraph_t graph_1{};
-    ret = hipGraphAddMemsetNode(&memsetNode, graph_1,
-                                nullptr, 0, &memsetParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass pDependencies as nullptr") {
-    ret = hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0, &memsetParams);
-    REQUIRE(hipSuccess == ret);
-  }
-  SECTION("Pass numDependencies is max and pDependencies is not valid ptr") {
-    ret = hipGraphAddMemsetNode(&memsetNode, graph,
-                                nullptr, INT_MAX, &memsetParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass pDependencies as nullptr, but numDependencies is non-zero") {
-    ret = hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 9, &memsetParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass pMemsetParams as nullptr") {
-    ret = hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0, nullptr);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass pMemsetParams as un-initialize object") {
-    hipMemsetParams memsetParams1;
-    ret = hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0,
-                                &memsetParams1);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass hipMemsetParams::dst as nullptr") {
-    memsetParams.dst = nullptr;
-    ret = hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0, &memsetParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass hipMemsetParams::element size other than 1, 2, or 4") {
-    memsetParams.dst = reinterpret_cast<void*>(devData);
-    memsetParams.elementSize = 9;
-    ret = hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0, &memsetParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  SECTION("Pass hipMemsetParams::height as zero") {
-    memsetParams.elementSize = sizeof(char);
-    memsetParams.height = 0;
-    ret = hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0, &memsetParams);
-    REQUIRE(hipErrorInvalidValue == ret);
-  }
-  HIP_CHECK(hipFree(devData));
+  GraphAddNodeCommonNegativeTests(std::bind(hipGraphAddMemsetNode, _1, _2, _3, _4, &params), graph);
+
+  hipGraphNode_t node = nullptr;
+  MemsetCommonNegative(std::bind(hipGraphAddMemsetNode, &node, graph, nullptr, 0, _1), params);
+
   HIP_CHECK(hipGraphDestroy(graph));
 }

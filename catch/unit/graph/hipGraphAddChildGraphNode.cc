@@ -17,31 +17,39 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios of hipGraphAddChildGraphNode API:
-
-Functional:
-1. Create child graph as root node and execute the main graph.
-2. Create multiple child graph nodes and check the behaviour
-3. Clone the child graph node, Add new nodes and execute the cloned graph
-4. Create child graph, add it to main graph and execute child graph
-5. Pass original graph as child graph and execute the org graph
-
-Negative:
-1. Pass nullptr to graph node
-2. Pass nullptr to graph
-3. Pass invalid number of numDepdencies
-4. Pass nullptr to child graph
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 
-/*
-This testcase verifies the negative scenarios of
-hipGraphAddChildGraphNode API
-*/
+/**
+ * @addtogroup hipGraphAddChildGraphNode hipGraphAddChildGraphNode
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphAddChildGraphNode(hipGraphNode_t* pGraphNode, hipGraph_t graph,
+ * const hipGraphNode_t* pDependencies, size_t numDependencies,
+ * hipGraph_t childGraph)` -
+ * Creates a child graph node and adds it to a graph.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When graph node pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When child graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When dependencies pointer is `nullptr` and number is not valid
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddChildGraphNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphAddChildGraphNode_Negative") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -59,7 +67,7 @@ TEST_CASE("Unit_hipGraphAddChildGraphNode_Negative") {
         0, A_h, B_d,
         Nbytes, hipMemcpyDeviceToHost));
 
-  SECTION("Pass nullptr to graph noe") {
+  SECTION("Pass nullptr to graph node") {
     REQUIRE(hipGraphAddChildGraphNode(nullptr, graph,
           nullptr, 0, childgraph1)
         == hipErrorInvalidValue);
@@ -77,18 +85,26 @@ TEST_CASE("Unit_hipGraphAddChildGraphNode_Negative") {
         == hipErrorInvalidValue);
   }
 
-  SECTION("Pass invalid depdencies") {
+  SECTION("Pass invalid dependencies") {
     REQUIRE(hipGraphAddChildGraphNode(&childGraphNode1, graph,
           nullptr, 10, childgraph1)
         == hipErrorInvalidValue);
   }
 }
 
-/*
-This testcase verifies the following scenario
-Creates the graph, add the graph as a child node
-and verify the number of the nodes in the original graph
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates the graph.
+ *  - Adds the graph as a child node.
+ *  - Verifies the number of the nodes in the original graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddChildGraphNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphAddChildGraphNode_OrgGraphAsChildGraph") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -126,11 +142,19 @@ TEST_CASE("Unit_hipGraphAddChildGraphNode_OrgGraphAsChildGraph") {
   HIP_CHECK(hipStreamDestroy(streamForGraph));
 }
 
-/*
-This testcase verifies the following scenario
-Create graph, Add child nodes to the graph and execute only the
-child graph node and verify the behaviour
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates a graph.
+ *  - Adds child nodes to the graph.
+ *  - Executes only the child graphs and verifies the behaviour.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddChildGraphNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphAddChildGraphNode_ExecuteChildGraph") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -183,11 +207,19 @@ TEST_CASE("Unit_hipGraphAddChildGraphNode_ExecuteChildGraph") {
   HIP_CHECK(hipStreamDestroy(streamForGraph));
 }
 
-/*
-This testcase verifies the following scenario
-creates graph, Add child nodes to graph, clone the graph and execute
-the cloned graph
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates the graphs.
+ *  - Adds child nodes to graph.
+ *  - Clones the graphs and executes the cloned graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddChildGraphNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphAddChildGraphNode_CloneChildGraph") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -237,11 +269,18 @@ TEST_CASE("Unit_hipGraphAddChildGraphNode_CloneChildGraph") {
   HIP_CHECK(hipStreamDestroy(streamForGraph));
 }
 
-/*
-This testcase verifies the following scenario
-Create graph, add multiple child nodes and validates the
-behaviour
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates the graph.
+ *  - Adds multiple child nodes and validates the behaviour.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddChildGraphNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphAddChildGraphNode_MultipleChildNodes") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -310,9 +349,18 @@ TEST_CASE("Unit_hipGraphAddChildGraphNode_MultipleChildNodes") {
   HIP_CHECK(hipGraphDestroy(graph));
   HIP_CHECK(hipStreamDestroy(streamForGraph));
 }
+
 /**
- This testcase verifies hipGraphAddChildGraphNode functionality
- where root node is the child node.
+ * Test Description
+ * ------------------------
+ *  - Create child graph as root node.
+ *  - Execute the main graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddChildGraphNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGraphAddChildGraphNode_SingleChildNode") {
   constexpr size_t N = 1024;

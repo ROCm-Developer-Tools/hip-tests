@@ -17,27 +17,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-Functional-
-1) Make a clone of the created graph and update the executable-graph from a clone or same graph again.
-2) Update the executable-graph from a graph and make sure they are taking effect.
-Negative-
-1) When Pass hGraphExec as nullptr and verify api returns error code.
-2) When Pass hGraph as nullptr and verify api returns error code.
-3) When Pass hErrorNode_out as nullptr and verify api returns error code.
-4) When Pass updateResult_out as nullptr and verify api returns error code.
-5) When the a graphExec was updated with with different type of node and verify api returns error code.
-6) When a node is deleted in hGraph but not its pair from hGraphExec and verify api returns error code.
-7) When a node is deleted in hGraphExec but not its pair from hGraph and verify api returns error code.
-8) When grpah dependencies differ but graph have same node and verify api returns error code.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 
-/* Test verifies hipGraphExecUpdate API Negative nullptr check scenarios.
+/**
+ * @addtogroup hipGraphExecUpdate hipGraphExecUpdate
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphExecUpdate(hipGraphExec_t hGraphExec, hipGraph_t hGraph,
+ * hipGraphNode_t* hErrorNode_out, hipGraphExecUpdateResult* updateResult_out)` -
+ * Check whether an executable graph can be updated with a graph and perform the update if
+ * possible.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When executable graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the graph node, which caused and update error, is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When update result variable is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecUpdate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGraphExecUpdate_Negative_Basic") {
   hipError_t ret;
@@ -47,13 +58,11 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_Basic") {
   hipGraphExecUpdateResult updateResult_out{};
 
   SECTION("Pass hGraphExec as nullptr") {
-    ret = hipGraphExecUpdate(nullptr, graph, &hErrorNode_out,
-                             &updateResult_out);
+    ret = hipGraphExecUpdate(nullptr, graph, &hErrorNode_out, &updateResult_out);
     REQUIRE(hipErrorInvalidValue == ret);
   }
   SECTION("Pass hGraph as nullptr") {
-    ret = hipGraphExecUpdate(graphExec, nullptr, &hErrorNode_out,
-                             &updateResult_out);
+    ret = hipGraphExecUpdate(graphExec, nullptr, &hErrorNode_out, &updateResult_out);
     REQUIRE(hipErrorInvalidValue == ret);
   }
   SECTION("Pass hErrorNode_out as nullptr") {
@@ -69,15 +78,28 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_Basic") {
 /* Test verifies hipGraphExecUpdate API Negative scenarios.
    When the a graphExec was updated with with different type of node
  */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates negative scenario where the executable graph was updated
+ *    with a different type of node.
+ *    - Expected output: return `hipErrorGraphExecUpdateFailure`
+ *       and result variable is `hipGraphExecUpdateErrorNodeTypeChanged`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecUpdate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphExecUpdate_Negative_TypeChange") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(char);
   constexpr size_t val = 0;
-  char *devData;
+  char* devData;
   int *A_d, *A_h;
 
-  HipTest::initArrays<int>(&A_d, nullptr, nullptr,
-                           &A_h, nullptr, nullptr, N, false);
+  HipTest::initArrays<int>(&A_d, nullptr, nullptr, &A_h, nullptr, nullptr, N, false);
 
   HIP_CHECK(hipMalloc(&devData, Nbytes));
 
@@ -99,8 +121,7 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_TypeChange") {
   memsetParams.elementSize = sizeof(char);
   memsetParams.width = Nbytes;
   memsetParams.height = 1;
-  HIP_CHECK(hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0,
-                                  &memsetParams));
+  HIP_CHECK(hipGraphAddMemsetNode(&memsetNode, graph, nullptr, 0, &memsetParams));
 
   std::vector<hipGraphNode_t> dependencies;
   dependencies.push_back(memsetNode);
@@ -109,12 +130,11 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_TypeChange") {
 
   HIP_CHECK(hipGraphCreate(&graph2, 0));
   HIP_CHECK(hipStreamCreate(&streamForGraph));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph2, nullptr, 0, A_d, A_h,
-                                    Nbytes, hipMemcpyHostToDevice));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph2, nullptr, 0, A_d, A_h, Nbytes,
+                                    hipMemcpyHostToDevice));
 
   // graphExec was created before memcpyTemp was added to graph.
-  ret = hipGraphExecUpdate(graphExec, graph2, &hErrorNode_out,
-                           &updateResult_out);
+  ret = hipGraphExecUpdate(graphExec, graph2, &hErrorNode_out, &updateResult_out);
 
   REQUIRE(hipGraphExecUpdateErrorNodeTypeChanged == updateResult_out);
   REQUIRE(hipErrorGraphExecUpdateFailure == ret);
@@ -130,6 +150,24 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_TypeChange") {
 /* Test verifies hipGraphExecUpdate API Negative scenarios.
    When the count of nodes differ in hGraphExec and hGraph
  */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates negative scenario where the count of nodes in
+ *    the executable graph differs from the count of nodes in graph.
+ *    - When a node is deleted from graph but not from its pair executable graph
+ *      -# Expected output: return `hipErrorGraphExecUpdateFailure`
+ *    - When a node is deleted from executable graph but not from its pair graph
+ *      -# Expected output: return `hipErrorGraphExecUpdateFailure`
+ *    - When the dependent nodes of a pair differ
+ *      -# Expected output: return `hipErrorGraphExecUpdateFailure`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecUpdate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphExecUpdate_Negative_CountDiffer") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -139,7 +177,7 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_CountDiffer") {
   int *A_h, *B_h, *C_h;
   size_t NElem{N};
 
-  int *hData = reinterpret_cast<int*>(malloc(Nbytes));
+  int* hData = reinterpret_cast<int*>(malloc(Nbytes));
   REQUIRE(hData != nullptr);
   memset(hData, 0, Nbytes);
 
@@ -158,22 +196,21 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_CountDiffer") {
 
   HIP_CHECK(hipGraphCreate(&graph1, 0));
   HIP_CHECK(hipStreamCreate(&streamForGraph));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph1, nullptr, 0, A_d, A_h,
-                                    Nbytes, hipMemcpyHostToDevice));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_B, graph1, nullptr, 0, B_d, B_h,
-                                    Nbytes, hipMemcpyHostToDevice));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_C, graph1, nullptr, 0, C_h, C_d,
-                                    Nbytes, hipMemcpyDeviceToHost));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph1, nullptr, 0, A_d, A_h, Nbytes,
+                                    hipMemcpyHostToDevice));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_B, graph1, nullptr, 0, B_d, B_h, Nbytes,
+                                    hipMemcpyHostToDevice));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_C, graph1, nullptr, 0, C_h, C_d, Nbytes,
+                                    hipMemcpyDeviceToHost));
 
-  void* kernelArgs[] = {&A_d, &B_d, &C_d, reinterpret_cast<void *>(&NElem)};
-  kernelNodeParams.func = reinterpret_cast<void *>(HipTest::vectorADD<int>);
+  void* kernelArgs[] = {&A_d, &B_d, &C_d, reinterpret_cast<void*>(&NElem)};
+  kernelNodeParams.func = reinterpret_cast<void*>(HipTest::vectorADD<int>);
   kernelNodeParams.gridDim = dim3(blocks);
   kernelNodeParams.blockDim = dim3(threadsPerBlock);
   kernelNodeParams.sharedMemBytes = 0;
   kernelNodeParams.kernelParams = reinterpret_cast<void**>(kernelArgs);
   kernelNodeParams.extra = nullptr;
-  HIP_CHECK(hipGraphAddKernelNode(&kernel_vecAdd, graph1, nullptr, 0,
-                                                        &kernelNodeParams));
+  HIP_CHECK(hipGraphAddKernelNode(&kernel_vecAdd, graph1, nullptr, 0, &kernelNodeParams));
 
   // Create dependencies
   HIP_CHECK(hipGraphAddDependencies(graph1, &memcpy_A, &kernel_vecAdd, 1));
@@ -182,40 +219,36 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_CountDiffer") {
 
   // Create a cloned graph and added extra node to it
   HIP_CHECK(hipGraphClone(&graph2, graph1));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyTemp, graph2, nullptr, 0,
-                                    C_h, C_d, Nbytes, hipMemcpyDeviceToHost));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyTemp, graph2, nullptr, 0, C_h, C_d, Nbytes,
+                                    hipMemcpyDeviceToHost));
 
   HIP_CHECK(hipGraphInstantiate(&graphExec1, graph1, nullptr, nullptr, 0));
   HIP_CHECK(hipGraphInstantiate(&graphExec2, graph2, nullptr, nullptr, 0));
 
   SECTION("When a node deleted from Graph but not from its pair GraphExec") {
-    ret = hipGraphExecUpdate(graphExec2, graph1, &hErrorNode_out,
-                             &updateResult_out);
+    ret = hipGraphExecUpdate(graphExec2, graph1, &hErrorNode_out, &updateResult_out);
     REQUIRE(hipErrorGraphExecUpdateFailure == ret);
   }
   SECTION("When a node deleted from GraphExec but not from its pair Graph") {
-    ret = hipGraphExecUpdate(graphExec1, graph2, &hErrorNode_out,
-                                 &updateResult_out);
+    ret = hipGraphExecUpdate(graphExec1, graph2, &hErrorNode_out, &updateResult_out);
     REQUIRE(hipErrorGraphExecUpdateFailure == ret);
   }
   SECTION("When the dependent nodes of a pair differ") {
     HIP_CHECK(hipGraphCreate(&graph3, 0));
-    HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph3, nullptr, 0, A_d, A_h,
-                                    Nbytes, hipMemcpyHostToDevice));
-    HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_B, graph3, nullptr, 0, B_d, B_h,
-                                    Nbytes, hipMemcpyHostToDevice));
-    HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_C, graph3, nullptr, 0, C_h, C_d,
-                                    Nbytes, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph3, nullptr, 0, A_d, A_h, Nbytes,
+                                      hipMemcpyHostToDevice));
+    HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_B, graph3, nullptr, 0, B_d, B_h, Nbytes,
+                                      hipMemcpyHostToDevice));
+    HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_C, graph3, nullptr, 0, C_h, C_d, Nbytes,
+                                      hipMemcpyDeviceToHost));
 
-    HIP_CHECK(hipGraphAddKernelNode(&kernel_vecAdd, graph3, nullptr, 0,
-                                                        &kernelNodeParams));
+    HIP_CHECK(hipGraphAddKernelNode(&kernel_vecAdd, graph3, nullptr, 0, &kernelNodeParams));
     // Create dependencies
     HIP_CHECK(hipGraphAddDependencies(graph3, &memcpy_A, &kernel_vecAdd, 1));
     HIP_CHECK(hipGraphAddDependencies(graph3, &memcpy_B, &kernel_vecAdd, 1));
     HIP_CHECK(hipGraphAddDependencies(graph3, &memcpy_C, &kernel_vecAdd, 1));
 
-    ret = hipGraphExecUpdate(graphExec1, graph3, &hErrorNode_out,
-                             &updateResult_out);
+    ret = hipGraphExecUpdate(graphExec1, graph3, &hErrorNode_out, &updateResult_out);
     REQUIRE(hipErrorGraphExecUpdateFailure == ret);
     HIP_CHECK(hipGraphDestroy(graph3));
   }
@@ -229,11 +262,19 @@ TEST_CASE("Unit_hipGraphExecUpdate_Negative_CountDiffer") {
   free(hData);
 }
 
-/* Functional Scenario -
-1) Make a clone of the created graph and update the executable-graph from a clone graph.
-2) Update the executable-graph from a graph and make sure they are taking effect.
-*/
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Makes a clone of the created graph.
+ *  - Updates the executable graph for a cloned graph.
+ *  - Updated the executable graph from a graph and make sure they are taking effect.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecUpdate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphExecUpdate_Functional") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -243,7 +284,7 @@ TEST_CASE("Unit_hipGraphExecUpdate_Functional") {
   int *A_h, *B_h, *C_h;
   size_t NElem{N};
 
-  int *hData = reinterpret_cast<int*>(malloc(Nbytes));
+  int* hData = reinterpret_cast<int*>(malloc(Nbytes));
   REQUIRE(hData != nullptr);
   memset(hData, 0, Nbytes);
 
@@ -261,23 +302,21 @@ TEST_CASE("Unit_hipGraphExecUpdate_Functional") {
 
   HIP_CHECK(hipGraphCreate(&graph, 0));
   HIP_CHECK(hipStreamCreate(&streamForGraph));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph, nullptr, 0, A_d, A_h,
-                                    Nbytes, hipMemcpyHostToDevice));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_B, graph, nullptr, 0, B_d, B_h,
-                                    Nbytes, hipMemcpyHostToDevice));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_C, graph, nullptr, 0, C_h, C_d,
-                                    Nbytes, hipMemcpyDeviceToHost));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph, nullptr, 0, A_d, A_h, Nbytes,
+                                    hipMemcpyHostToDevice));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_B, graph, nullptr, 0, B_d, B_h, Nbytes,
+                                    hipMemcpyHostToDevice));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_C, graph, nullptr, 0, C_h, C_d, Nbytes,
+                                    hipMemcpyDeviceToHost));
 
-  void* kernelArgs[] = {&A_d, &B_d, &C_d, reinterpret_cast<void *>(&NElem)};
-  kernelNodeParams.func =
-                   reinterpret_cast<void *>(HipTest::vector_square<int>);
+  void* kernelArgs[] = {&A_d, &B_d, &C_d, reinterpret_cast<void*>(&NElem)};
+  kernelNodeParams.func = reinterpret_cast<void*>(HipTest::vector_square<int>);
   kernelNodeParams.gridDim = dim3(blocks);
   kernelNodeParams.blockDim = dim3(threadsPerBlock);
   kernelNodeParams.sharedMemBytes = 0;
   kernelNodeParams.kernelParams = reinterpret_cast<void**>(kernelArgs);
   kernelNodeParams.extra = nullptr;
-  HIP_CHECK(hipGraphAddKernelNode(&kernel_vecSquare, graph, nullptr, 0,
-                                                        &kernelNodeParams));
+  HIP_CHECK(hipGraphAddKernelNode(&kernel_vecSquare, graph, nullptr, 0, &kernelNodeParams));
 
   // Create dependencies
   HIP_CHECK(hipGraphAddDependencies(graph, &memcpy_A, &kernel_vecSquare, 1));
@@ -289,31 +328,28 @@ TEST_CASE("Unit_hipGraphExecUpdate_Functional") {
 
   SECTION("Update graphExec with clone graph") {
     HIP_CHECK(hipGraphClone(&clonedgraph, graph));
-    HIP_CHECK(hipGraphExecUpdate(graphExec, clonedgraph, &hErrorNode_out,
-                                 &updateResult_out));
+    HIP_CHECK(hipGraphExecUpdate(graphExec, clonedgraph, &hErrorNode_out, &updateResult_out));
   }
 
   // Code for new graph creation with samilar node setup
   HIP_CHECK(hipGraphCreate(&graph2, 0));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph2, nullptr, 0, A_d, A_h,
-                                    Nbytes, hipMemcpyHostToDevice));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_B, graph2, nullptr, 0, B_d, B_h,
-                                    Nbytes, hipMemcpyHostToDevice));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_C, graph2, nullptr, 0, C_h, C_d,
-                                    Nbytes, hipMemcpyDeviceToHost));
-  HIP_CHECK(hipGraphMemcpyNodeSetParams1D(memcpy_C, hData, C_d, Nbytes,
-                                          hipMemcpyDeviceToHost));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_A, graph2, nullptr, 0, A_d, A_h, Nbytes,
+                                    hipMemcpyHostToDevice));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_B, graph2, nullptr, 0, B_d, B_h, Nbytes,
+                                    hipMemcpyHostToDevice));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpy_C, graph2, nullptr, 0, C_h, C_d, Nbytes,
+                                    hipMemcpyDeviceToHost));
+  HIP_CHECK(hipGraphMemcpyNodeSetParams1D(memcpy_C, hData, C_d, Nbytes, hipMemcpyDeviceToHost));
 
   memset(&kernelNodeParams, 0, sizeof(hipKernelNodeParams));
-  void* kernelArgs2[] = {&A_d, &B_d, &C_d, reinterpret_cast<void *>(&NElem)};
-  kernelNodeParams.func = reinterpret_cast<void *>(HipTest::vectorADD<int>);
+  void* kernelArgs2[] = {&A_d, &B_d, &C_d, reinterpret_cast<void*>(&NElem)};
+  kernelNodeParams.func = reinterpret_cast<void*>(HipTest::vectorADD<int>);
   kernelNodeParams.gridDim = dim3(blocks);
   kernelNodeParams.blockDim = dim3(threadsPerBlock);
   kernelNodeParams.sharedMemBytes = 0;
   kernelNodeParams.kernelParams = reinterpret_cast<void**>(kernelArgs2);
   kernelNodeParams.extra = nullptr;
-  HIP_CHECK(hipGraphAddKernelNode(&kernel_vecAdd, graph2, nullptr, 0,
-                                                        &kernelNodeParams));
+  HIP_CHECK(hipGraphAddKernelNode(&kernel_vecAdd, graph2, nullptr, 0, &kernelNodeParams));
 
   // Create dependencies
   HIP_CHECK(hipGraphAddDependencies(graph2, &memcpy_A, &kernel_vecAdd, 1));
@@ -321,8 +357,7 @@ TEST_CASE("Unit_hipGraphExecUpdate_Functional") {
   HIP_CHECK(hipGraphAddDependencies(graph2, &kernel_vecAdd, &memcpy_C, 1));
 
   // Update the graphExec graph from graph -> graph2
-  HIP_CHECK(hipGraphExecUpdate(graphExec, graph2, &hErrorNode_out,
-                               &updateResult_out));
+  HIP_CHECK(hipGraphExecUpdate(graphExec, graph2, &hErrorNode_out, &updateResult_out));
   REQUIRE(updateResult_out == hipGraphExecUpdateSuccess);
 
   HIP_CHECK(hipGraphLaunch(graphExec, streamForGraph));

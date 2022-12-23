@@ -93,6 +93,18 @@
 	   "Note: needs to be enabled when streamPerThread issues are fixed",
 	   "Unit_hipStreamSynchronize_NullStreamAndStreamPerThread",
 	   "Note: intermittent Seg fault failure ",
-	   "Unit_hipGraphAddEventRecordNode_Functional_WithoutFlags"
+	   "Unit_hipGraphAddEventRecordNode_Functional_WithoutFlags",
+	   "Note: Following four tests disabled due to defect - EXSWHTEC-203",
+	   "Unit_hipGraphAddMemsetNode_Positive_Basic - uint16_t",
+	   "Unit_hipGraphAddMemsetNode_Positive_Basic - uint32_t",
+	   "Unit_hipGraphMemsetNodeSetParams_Positive_Basic - uint16_t",
+	   "Unit_hipGraphMemsetNodeSetParams_Positive_Basic - uint32_t",
+	   "Note: Test disabled due to defect - EXSWHTEC-207",
+	   "Unit_hipGraphExecMemsetNodeSetParams_Negative_Updating_Non1D_Node",
+	   "Unit_hipGraphMemcpyNodeSetParamsToSymbol_Positive_Basic",
+	   "Unit_hipGraphExecMemcpyNodeSetParamsToSymbol_Positive_Basic",
+	   "Unit_hipGraphMemcpyNodeSetParamsFromSymbol_Positive_Basic",
+	   "Unit_hipGraphExecMemcpyNodeSetParamsFromSymbol_Positive_Basic",
+	   "Unit_hipGraphAddMemcpyNode_Negative_Parameters"
 	]
 }

@@ -22,65 +22,104 @@
 set(TEST_SRC
   hipGraphAddEmptyNode.cc
   hipGraphAddDependencies.cc
+  hipGraphAddDependencies_old.cc
   hipGraphAddEventRecordNode.cc
   hipGraphAddEventWaitNode.cc
   hipGraph.cc
   hipSimpleGraphWithKernel.cc
   hipGraphAddMemcpyNode.cc
+  hipGraphAddMemcpyNode_old.cc
   hipGraphClone.cc
   hipGraphInstantiateWithFlags.cc
   hipGraphAddHostNode.cc
+  hipGraphAddMemcpyNodeFromSymbol_old.cc
   hipGraphAddMemcpyNodeFromSymbol.cc
   hipGraphChildGraphNodeGetGraph.cc
   hipGraphNodeFindInClone.cc
   hipGraphExecHostNodeSetParams.cc
+  hipGraphAddMemcpyNodeToSymbol_old.cc
   hipGraphAddMemcpyNodeToSymbol.cc
   hipGraphExecMemsetNodeSetParams.cc
+  hipGraphMemcpyNodeSetParamsToSymbol_old.cc
   hipGraphMemcpyNodeSetParamsToSymbol.cc
   hipGraphDestroyNode.cc
   hipGraphGetNodes.cc
+  hipGraphGetNodes_old.cc
   hipGraphGetRootNodes.cc
+  hipGraphGetRootNodes_old.cc
   hipGraphHostNodeSetParams.cc
   hipGraphAddMemcpyNode1D.cc
   hipGraphAddChildGraphNode.cc
   hipGraphNodeGetType.cc
+  hipGraphExecMemcpyNodeSetParams1D_old.cc
   hipGraphExecMemcpyNodeSetParams1D.cc
   hipGraphGetEdges.cc
+  hipGraphGetEdges_old.cc
   hipGraphRemoveDependencies.cc
+  hipGraphRemoveDependencies_old.cc
   hipGraphInstantiate.cc
   hipGraphExecUpdate.cc
   hipGraphExecEventRecordNodeSetEvent.cc
   hipGraphEventWaitNodeSetEvent.cc
   hipGraphMemsetNodeGetParams.cc
   hipGraphMemsetNodeSetParams.cc
+  hipGraphExecMemcpyNodeSetParamsFromSymbol_old.cc
   hipGraphExecMemcpyNodeSetParamsFromSymbol.cc
   hipGraphEventRecordNodeGetEvent.cc
   hipGraphEventRecordNodeSetEvent.cc
   hipGraphEventWaitNodeGetEvent.cc
   hipGraphExecMemcpyNodeSetParams.cc
+  hipGraphExecMemcpyNodeSetParams_old.cc
   hipStreamBeginCapture.cc
+  hipStreamBeginCapture_old.cc
+  hipGraphAddMemcpyNode1D_old.cc
   hipGraphAddMemcpyNode1D.cc
   hipStreamIsCapturing.cc
+  hipStreamIsCapturing_old.cc
   hipStreamGetCaptureInfo.cc
+  hipStreamGetCaptureInfo_old.cc
   hipStreamEndCapture.cc
+  hipStreamEndCapture_old.cc
+  hipGraphMemcpyNodeSetParamsFromSymbol_old.cc
   hipGraphMemcpyNodeSetParamsFromSymbol.cc
   hipGraphExecEventWaitNodeSetEvent.cc
   hipGraphAddMemsetNode.cc
   hipGraphAddKernelNode.cc
   hipGraphMemcpyNodeGetParams.cc
+  hipGraphMemcpyNodeGetParams_old.cc
   hipGraphMemcpyNodeSetParams.cc
+  hipGraphMemcpyNodeSetParams_old.cc
   hipGraphKernelNodeGetParams.cc
   hipGraphKernelNodeSetParams.cc
   hipGraphExecKernelNodeSetParams.cc
   hipGraphLaunch.cc
+  hipGraphMemcpyNodeSetParams1D_old.cc
   hipGraphMemcpyNodeSetParams1D.cc
+  hipGraphExecMemcpyNodeSetParamsToSymbol_old.cc
   hipGraphExecMemcpyNodeSetParamsToSymbol.cc
   hipGraphNodeGetDependentNodes.cc
+  hipGraphNodeGetDependentNodes_old.cc
   hipGraphNodeGetDependencies.cc
+  hipGraphNodeGetDependencies_old.cc
   hipGraphHostNodeGetParams.cc
   hipGraphExecChildGraphNodeSetParams.cc
   hipStreamGetCaptureInfo_v2.cc
+  hipStreamGetCaptureInfo_v2_old.cc
+  hipStreamUpdateCaptureDependencies.cc
+  hipThreadExchangeStreamCaptureMode.cc
+  hipLaunchHostFunc.cc
+  hipGraphCreate.cc
+  hipGraphDestroy.cc
+  hipGraphExecDestroy.cc
+  hipGraphLaunch_old.cc
+  hipGraphUpload.cc
   hipUserObjectCreate.cc
+  hipGraphKernelNodeSetAttribute.cc
+  hipGraphKernelNodeGetAttribute.cc
+  hipUserObjectRelease.cc
+  hipUserObjectRetain.cc
+  hipGraphReleaseUserObject.cc
+  hipGraphRetainUserObject.cc
 )
 
 hip_add_exe_to_target(NAME GraphsTest

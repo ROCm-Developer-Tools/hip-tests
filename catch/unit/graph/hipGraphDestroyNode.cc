@@ -17,37 +17,49 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-Testcase Scenarios of hipGraphDestroyNode API:
-
-Negative ::
-
-1) Pass nullptr to graph node
-
-Functional ::
-
-1) Create Node and destroy the node
-2) Create graph with dependencies and destroy one of the dependency node
-   before executing the graph.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 
+/**
+ * @addtogroup hipGraphDestroyNode hipGraphDestroyNode
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphDestroyNode(hipGraphNode_t node)` -
+ * Remove a node from the graph.
+ */
 
-/* This test covers the negative scenarios of
-   hipGraphDestroyNode API */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When node handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphDestroyNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphDestroyNode_Negative") {
   SECTION("Passing nullptr to graph Node") {
     REQUIRE(hipGraphDestroyNode(nullptr) == hipErrorInvalidValue);
   }
 }
 
-/* This test covers the basic functionality of
-   hipGraphDestroyNode API where we create and destroy
-   the node
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates graph.
+ *  - Destroys one of the nodes successfully.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphDestroyNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphDestroyNode_BasicFunctionality") {
   char *pOutBuff_d{};
   constexpr size_t size = 1024;
@@ -69,11 +81,19 @@ TEST_CASE("Unit_hipGraphDestroyNode_BasicFunctionality") {
   HIP_CHECK(hipFree(pOutBuff_d));
 }
 
-/*
-This testcase verifies the following scenario where
-graph is created with dependencies and one of the dependency is
-destroyed before execute the graph
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates graph with dependencies.
+ *  - Destroys one of the dependency nodes.
+ *  - Executes the graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphDestroyNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphDestroyNode_DestroyDependencyNode") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);

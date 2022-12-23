@@ -17,16 +17,29 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
- 1) Create and add empty node to graph and verify addition is successful.
- 2) Negative Scenarios
-*/
-
 #include <hip_test_common.hh>
 
 /**
- * Functional Test to add empty node with dependencies
+ * @addtogroup hipGraphAddEmptyNode hipGraphAddEmptyNode
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphAddEmptyNode(hipGraphNode_t* pGraphNode, hipGraph_t graph,
+ * const hipGraphNode_t* pDependencies, size_t numDependencies)` -
+ * Creates an empty node and adds it to a graph.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates an empty node.
+ *  - Adds empty node to the graph.
+ *  - Verifies that the addition is successful.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddEmptyNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGraphAddEmptyNode_Functional") {
   char *pOutBuff_d{};
@@ -58,7 +71,21 @@ TEST_CASE("Unit_hipGraphAddEmptyNode_Functional") {
 }
 
 /**
- * Negative Scenarios hipGraphAddEmptyNode
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When empty graph node pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When graph is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When dependencies are `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphAddEmptyNode.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipGraphAddEmptyNode_NegTest") {
   char *pOutBuff_d{};
@@ -90,7 +117,7 @@ TEST_CASE("Unit_hipGraphAddEmptyNode_NegTest") {
                           dependencies.data(), dependencies.size()));
   }
   // pDependencies is nullptr
-  SECTION("Null Graph") {
+  SECTION("Null Dependencies") {
     REQUIRE(hipErrorInvalidValue == hipGraphAddEmptyNode(&emptyNode, graph,
                           nullptr, dependencies.size()));
   }

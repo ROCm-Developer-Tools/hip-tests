@@ -16,30 +16,40 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-  Testcase Scenarios of hipGraphExecChildGraphNodeSetParams API:
-
-  Functional Scenarios:
-  1. Create child graph, Instantiate the graph and update the child graph
-     using hipGraphExecChildGraphNodeSetParams API
-  2. Create child graph with topology, Instantiate the graph
-     and update the child graph
-     using hipGraphExecChildGraphNodeSetParams API
-
-  Negative Scenarios:
-  1. Pass nullptr to child graph
-  2. Pass nullptr to graphnode
-  3. Pass nullptr to graphExec
-  4. Pass uninitialized graph node
-  5. Pass orginial graph node instead of child graph node
-  6. Change topology of child graph node
- **/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 
+/**
+ * @addtogroup hipGraphExecChildGraphNodeSetParams hipGraphExecChildGraphNodeSetParams
+ * @{
+ * @ingroup GraphTest
+ * `hipGraphExecChildGraphNodeSetParams(hipGraphExec_t hGraphExec,
+ * hipGraphNode_t node, hipGraph_t childGraph)` -
+ * Updates node parameters in the child graph node in the given graphExec.
+ */
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When executable graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When child graph node handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When child graph handle is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When parent graph is passed instead of child graph
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When updating the child graph topology
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecChildGraphNodeSetParams.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphExecChildGraphNodeSetParams_Negative") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -130,13 +140,21 @@ TEST_CASE("Unit_hipGraphExecChildGraphNodeSetParams_Negative") {
   HIP_CHECK(hipStreamDestroy(streamForGraph));
 }
 
-/*
-   This testcase verifies the following scenario
-   Create graph, add child node to graph, Instantiate the graph
-   and update the child graph node with a new graph
-   using hipGraphExecChildGraphNodeSetParams API
-   and execute it
-   */
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates a graph.
+ *  - Adds the child node to the graph.
+ *  - Instantiates the graph.
+ *  - Updates the child graph node with a new graph.
+ *  - Executes the graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecChildGraphNodeSetParams.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphExecChildGraphNodeSetParams_BasicFunc") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
@@ -208,14 +226,22 @@ TEST_CASE("Unit_hipGraphExecChildGraphNodeSetParams_BasicFunc") {
   HIP_CHECK(hipStreamDestroy(streamForGraph));
 }
 
-/*
-   This testcase verifies the following scenario
-   Create graph, Create child graph with a topology and
-   add child node to graph, Instantiate the graph
-   and update the child graph node with a new graph
-   using hipGraphExecChildGraphNodeSetParams API
-   and execute it
-   */
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates a graph.
+ *  - Creates child graph with a topology.
+ *  - Adds child node to graph.
+ *  - Instantiate the graph.
+ *  - Updates the child graph node with a new graph.
+ *  - Executes the graph.
+ * Test source
+ * ------------------------
+ *  - unit/graph/hipGraphExecChildGraphNodeSetParams.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGraphExecChildGraphNodeSetParams_ChildTopology") {
   constexpr size_t N = 1024;
   constexpr size_t Nbytes = N * sizeof(int);
