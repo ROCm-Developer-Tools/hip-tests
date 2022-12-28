@@ -20,12 +20,45 @@ THE SOFTWARE.
 #include <chrono>
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipStreamCreateWithFlags hipStreamCreateWithFlags
+ * @{
+ * @ingroup StreamTest
+ * `hipStreamCreateWithFlags(hipStream_t* stream, unsigned int flags)` -
+ * Create an asynchronous stream with flags.
+ */
+
 namespace hipStreamCreateWithFlagsTests {
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies handling of invalid arguments:
+ *    -# When output pointer to the stream is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamCreateWithFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamCreateWithFlags_Negative_NullStream") {
   HIP_CHECK_ERROR(hipStreamCreateWithFlags(nullptr, hipStreamDefault), hipErrorInvalidValue);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates stream with invalid flag.
+ *  - Valid flags are 0x0 and 0x1.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamCreateWithFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamCreateWithFlags_Negative_InvalidFlag") {
   hipStream_t stream{};
   unsigned int flag = 0xFF;
@@ -34,7 +67,18 @@ TEST_CASE("Unit_hipStreamCreateWithFlags_Negative_InvalidFlag") {
   HIP_CHECK_ERROR(hipStreamCreateWithFlags(&stream, flag), hipErrorInvalidValue);
 }
 
-// create a stream and check the properties are correctly set
+/**
+ * Test Description
+ * ------------------------
+ *  - Creates streams with valid flags.
+ *  - Checks that they are created as expected.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamCreateWithFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamCreateWithFlags_Default") {
   const unsigned int flagUnderTest = GENERATE(hipStreamDefault, hipStreamNonBlocking);
   hipStream_t stream{};
@@ -52,9 +96,25 @@ TEST_CASE("Unit_hipStreamCreateWithFlags_Default") {
   HIP_CHECK(hipStreamDestroy(stream));
 }
 
-// a stream will default to blocking the null stream, but will not block the null stream when
-// created with hipStreamNonBlocking
 #if HT_AMD /* Disabled because frequency based wait is timing out on nvidia platforms */
+/**
+ * Test Description
+ * ------------------------
+ *  - Test how stream set as default interacts with created streams.
+ *    -# When null stream is set as default and stream is created as default
+ *      - Created stream is blocking the null stream and vice versa
+ *    -# When null stream is set as default and stream is created as non blocking
+ *      - Created stream is not blocking the null stream and vice versa
+ *    -# When stream per thread is set as default and stream is created with any flag
+ *      - Created stream is not blocking the default stream and vice versa
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamCreateWithFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamCreateWithFlags_DefaultStreamInteraction") {
   const hipStream_t defaultStream = GENERATE(static_cast<hipStream_t>(nullptr), hipStreamPerThread);
   const unsigned int flagUnderTest = GENERATE(hipStreamDefault, hipStreamNonBlocking);

@@ -17,14 +17,14 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenario :
-Validate behaviour of HIP when multiple hipStreaAddCallback() are called over
-multiple Threads.
-*/
-
 #include <hip_test_common.hh>
 #include <atomic>
+
+/**
+ * @addtogroup hipStreamAddCallback hipStreamAddCallback
+ * @{
+ * @ingroup StreamTest
+ */
 
 static constexpr size_t N = 4096;
 static constexpr int numThreads = 1000;
@@ -97,8 +97,15 @@ void Thread2_func() {
 }
 
 /**
- Test multiple hipStreamAddCallback() called over
- multiple Threads.
+ * Test Description
+ * ------------------------
+ *  - Add callbacks on the streams from multiple threads.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamACb_MultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamAddCallback_MultipleThreads") {
   float *A_d, *C_d;

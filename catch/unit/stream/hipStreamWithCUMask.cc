@@ -17,29 +17,21 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-
-1)Validates functionality of hipStreamAddCallback with created stream.
-
-2)Validates functionality of stream with cu mask.
-
-3)Create a stream with all CU masks disabled (0x00000000).
-Verify that default CU mask is set for the stream.
-
-4)Size is greater than physical CU number. In this case the extra elements
-are ignored and hipExtStreamCreateWithCUMask must return hipSuccess.
-
-5)Negative Testing of hipExtStreamCreateWithCUMask.
-*/
-
-
 #include <hip_test_common.hh>
 #include <hip_test_kernels.hh>
 #include <chrono>
 #include <thread>
 #include <iostream>
 #include <vector>
+
+/**
+ * @addtogroup hipExtStreamCreateWithCUMask hipExtStreamCreateWithCUMask
+ * @{
+ * @ingroup StreamTest
+ * `hipExtStreamCreateWithCUMask(hipStream_t* stream, uint32_t cuMaskSize, 
+ *  const uint32_t* cuMask)` -
+ * Create an asynchronous stream with the specified CU mask.
+ */
 
 #define NUM_CU_PARTITIONS 4
 #define CONSTANT 1.618f
@@ -121,9 +113,18 @@ using hipExtStreamCreateWithCUMaskTest::createDefaultCUMask;
 using hipExtStreamCreateWithCUMaskTest::createDisabledCUMask;
 using hipExtStreamCreateWithCUMaskTest::Callback;
 
-
 /**
- * Scenario: Validates functionality of hipStreamAddCallback with created stream.
+ * Test Description
+ * ------------------------
+ *  - Creates stream with CU mask.
+ *  - Adds callback to the created stream.
+ *  - Successfully destroys the stream.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamWithCUMask.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipExtStreamCreateWithCUMask_ValidateCallbackFunc") {
   float *A_d, *C_d;
@@ -171,7 +172,15 @@ TEST_CASE("Unit_hipExtStreamCreateWithCUMask_ValidateCallbackFunc") {
 }
 
 /**
- * Scenario: Validates functionality of stream with cu mask.
+ * Test Description
+ * ------------------------
+ *  - Creates a stream for each possible CU mask.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamWithCUMask.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipExtStreamCreateWithCUMask_Functionality") {
   const int KNumPartition = NUM_CU_PARTITIONS;
@@ -304,8 +313,15 @@ TEST_CASE("Unit_hipExtStreamCreateWithCUMask_Functionality") {
 }
 
 /**
- * Scenario: Create a stream with all CU masks disabled (0x00000000).
- * Verify that default CU mask is set for the stream.
+ * Test Description
+ * ------------------------
+ *  - Verifies that the stream is created with default CU mask if all of the CU's are disabled.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamWithCUMask.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipExtStreamCreateWithCUMask_AllCUsMasked") {
   HIP_CHECK(hipSetDevice(0));
@@ -330,7 +346,21 @@ TEST_CASE("Unit_hipExtStreamCreateWithCUMask_AllCUsMasked") {
 }
 
 /**
- * Scenario: Negative Testing of hipExtStreamCreateWithCUMask.
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When the output stream pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the CU mask size is 0
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the CU mask pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamWithCUMask.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipExtStreamCreateWithCUMask_NegTst") {
   std::vector<uint32_t> defaultCUMask;

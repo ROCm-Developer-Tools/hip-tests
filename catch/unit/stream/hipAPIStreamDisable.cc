@@ -19,6 +19,12 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include "hip/math_functions.h"
 
+/**
+ * @addtogroup hipStreamCreate hipStreamCreate
+ * @{
+ * @ingroup StreamTest
+ */
+
 #define NUM_STREAMS 8
 
 namespace hipAPIStreamDisableTest {
@@ -41,7 +47,16 @@ __global__ void nKernel(float* y) {
 }  // namespace hipAPIStreamDisableTest
 
 /**
- * Validate basic multistream functionalities
+ * Test Description
+ * ------------------------
+ *  - Validate basic multistream functionalities.
+ *  - Launch the same kernel for multiple streams.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipAPIStreamDisable.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamCreate_MultistreamBasicFunctionalities") {
   hipStream_t streams[NUM_STREAMS];

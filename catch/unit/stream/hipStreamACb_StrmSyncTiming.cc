@@ -17,17 +17,17 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenario :
-Validate behaviour of HIP when multiple hipStreaAddCallback() are called over
-multiple Threads.
-*/
-
 #include <stdio.h>
 #include <atomic>
 #include <chrono>
 #include <hip_test_common.hh>
 #include <hip_test_kernels.hh>
+
+/**
+ * @addtogroup hipStreamAddCallback hipStreamAddCallback
+ * @{
+ * @ingroup StreamTest
+ */
 
 #ifdef __HIP_PLATFORM_AMD__
 #define HIPRT_CB
@@ -77,8 +77,15 @@ static void HIPRT_CB Callback1(hipStream_t stream, hipError_t status, void* user
 }
 
 /**
- Test multiple hipStreamAddCallback() called over
- multiple Threads.
+ * Test Description
+ * ------------------------
+ *  - Add callbacks on the streams utilizing synchronization.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamACb_MultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamAddCallback_StrmSyncTiming") {
   float *A_d, *C_d;

@@ -17,17 +17,22 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
- 1) Validates parameter list of hipStreamAddCallback.
- 2) Validates hipStreamAddCallback functionality with default stream.
- 3) Validates hipStreamAddCallback functionality with defined stream.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_kernels.hh>
 #include <chrono>
 #include <thread>
+
+/**
+ * @addtogroup hipStreamAddCallback hipStreamAddCallback
+ * @{
+ * @ingroup StreamTest
+ * `hipStreamAddCallback(hipStream_t stream, hipStreamCallback_t callback,
+ * void* userData, unsigned int flags)` -
+ * Adds a callback to be called on the host after all currently enqueued
+ * items in the stream have completed.  For each
+ * hipStreamAddCallback call, a callback will be executed exactly once.
+ * The callback will block later work in the stream until it is finished.
+ */
 
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
@@ -59,9 +64,8 @@ void HIPRT_CB Callback(hipStream_t stream, hipError_t status,
   }
   gcbDone = true;
 }
-/**
- * Validates functionality of hipStreamAddCallback with default/created stream.
- */
+
+// Validates functionality of hipStreamAddCallback with default/created stream.
 bool testStreamCallbackFunctionality(bool isDefault) {
   float *A_d, *C_d;
   size_t Nbytes = NSize * sizeof(float);
@@ -115,14 +119,14 @@ bool testStreamCallbackFunctionality(bool isDefault) {
   free(A_h);
   return gPassed;
 }
-/**
- * Scenario1: Validates if callback = nullptr returns error code for created stream.
- * Scenario2: Validates if callback = nullptr returns error code for default stream.
- * Scenario3: Validates if flag != 0 returns error code for created stream.
- * Scenario4: Validates if flag != 0 returns error code for default stream.
- * Scenario5: Validates if userData pointer is passed properly to callback.
- * Scenario6: Validates if stream value is passed properly to callback.
- */
+/*
+Scenario1: Validates if callback = nullptr returns error code for created stream.
+Scenario2: Validates if callback = nullptr returns error code for default stream.
+Scenario3: Validates if flag != 0 returns error code for created stream.
+Scenario4: Validates if flag != 0 returns error code for default stream.
+Scenario5: Validates if userData pointer is passed properly to callback.
+Scenario6: Validates if stream value is passed properly to callback.
+*/
 void Callback_ChkUsrdataPtr(hipStream_t stream, hipError_t status,
                             void* userData) {
   REQUIRE(stream == gstream);
@@ -157,9 +161,20 @@ using hipStreaAddCallbackTest::Callback;
 using hipStreaAddCallbackTest::Callback_ChkUsrdataPtr;
 using hipStreaAddCallbackTest::Callback_ChkStreamValue;
 
-
-/*
- * Validates parameter list of hipStreamAddCallback.
+/**
+ * Test Description
+ * ------------------------
+ *  - Test that all parameters behave correctly:
+ *    -# When userData pointer is valid
+ *      - Expected output: return `hipSuccess`
+ *    -# When stream is created
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamAddCallback.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamAddCallback_ParamTst_Positive") {
   hipStream_t mystream;
@@ -193,8 +208,24 @@ TEST_CASE("Unit_hipStreamAddCallback_ParamTst_Positive") {
   HIP_CHECK(hipStreamDestroy(mystream));
 }
 
-/*
- * Negative tests for validation of hipStreamAddCallback parameter list.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When callback is `nullptr` for non-default stream
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When callback is `nullptr` for default stream
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When flag is non-zero for non-default stream
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When flag is non-zero for default stream
+ *      - Expected output: do not return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamAddCallback.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamAddCallback_ParamTst_Negative") {
   hipStream_t mystream;
@@ -223,8 +254,16 @@ TEST_CASE("Unit_hipStreamAddCallback_ParamTst_Negative") {
   HIP_CHECK(hipStreamDestroy(mystream));
 }
 
-/*
- * Validates hipStreamAddCallback functionality with default stream.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates adding callback functionality with default stream.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamAddCallback.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamAddCallback_WithDefaultStream") {
   bool TestPassed = true;
@@ -232,12 +271,19 @@ TEST_CASE("Unit_hipStreamAddCallback_WithDefaultStream") {
   REQUIRE(TestPassed);
 }
 
-/*
- * Validates hipStreamAddCallback functionality with defined stream.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates adding callback functionality with defined stream.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamAddCallback.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamAddCallback_WithCreatedStream") {
   bool TestPassed = true;
   TestPassed = testStreamCallbackFunctionality(false);
   REQUIRE(TestPassed);
 }
-

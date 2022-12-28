@@ -23,30 +23,49 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 
 /**
- * @addtogroup hipDeviceGetStreamPriorityRange hipDeviceGetStreamPriorityRange
+ * @addtogroup hipFreeAsync hipFreeAsync
  * @{
- * @ingroup StreamTest
- * `hipDeviceGetStreamPriorityRange(int* leastPriority, int* greatestPriority)` -
- * Returns numerical values that correspond to the least and greatest stream priority.
+ * @ingroup StreamOTest
+ * `hipFreeAsync(void* dev_ptr, hipStream_t stream)` -
+ * Frees memory with stream ordered semantics.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemPoolApi_Default
+ *  - @ref Unit_hipMemPoolApi_Basic
  */
 
 /**
  * Test Description
  * ------------------------
- *  - Checks that the low and high priority limits are valid.
+ *  - Verifies handling of invalid arguments:
+ *    -# When the device allocation pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When the stream is invalid
+ *      - Expected output: do not return `hipSuccess`
  * Test source
  * ------------------------
- *  - unit/stream/hipDeviceGetStreamPriorityRange.cc
+ *  - unit/memory/hipFreeAsync.cc
  * Test requirements
  * ------------------------
  *  - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipDeviceGetStreamPriorityRange_Default") {
-  int priority_low = 0;
-  int priority_high = 0;
-  int devID = GENERATE(range(0, HipTest::getDeviceCount()));
-  HIP_CHECK(hipSetDevice(devID));
-  HIP_CHECK(hipDeviceGetStreamPriorityRange(&priority_low, &priority_high));
+TEST_CASE("Unit_hipFreeAsync_negative") {
+  HIP_CHECK(hipSetDevice(0));
+  void* p = nullptr;
+  hipStream_t stream{nullptr};
+  hipStreamCreate(&stream);
 
-  REQUIRE(priority_low >= priority_high);
+  SECTION("dev_ptr is nullptr") { REQUIRE(hipFreeAsync(nullptr, stream) != hipSuccess); }
+
+  SECTION("invalid stream handle") {
+    HIP_CHECK(hipMallocAsync(static_cast<void**>(&p), 100, stream));
+    HIP_CHECK(hipStreamSynchronize(stream));
+    hipError_t error = hipFreeAsync(p, reinterpret_cast<hipStream_t>(-1));
+    HIP_CHECK(hipFreeAsync(p, stream));
+    HIP_CHECK(hipStreamSynchronize(stream));
+    REQUIRE(error != hipSuccess);
+  }
+
+  HIP_CHECK(hipStreamSynchronize(stream));
+  HIP_CHECK(hipStreamDestroy(stream));
 }

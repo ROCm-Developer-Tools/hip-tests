@@ -17,20 +17,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-Testcase Scenarios :
-1) Negative tests for hipStreamGetPriority api.
-2) Create stream and check default priority of stream is within range.
-3) Create stream with high or low priority and check priority is set as expected.
-4) Create stream with higher priority or lower priority for the priority range returned, the stream
-priority should be clamped to the priority range.
-5) Create stream with CUMask and check priority is returned as expected.
-*/
-
 #include <hip_test_common.hh>
 
 /**
- * Create stream and check priority.
+ * @addtogroup hipStreamGetPriority hipStreamGetPriority
+ * @{
+ * @ingroup StreamTest
+ * `hipStreamGetPriority(hipStream_t stream, int* priority)` -
+ * Query the priority of a stream.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks different valid scenarios:
+ *    -# When stream is `nullptr`
+ *      - Expected output: valid priority
+ *    -# When default priority stream is created
+ *      - Expected output: valid priority
+ *    -# When high priority stream is created
+ *      - Expected output: valid priority
+ *    -# When stream priority is higher than avaliable
+ *      - Expected output: clamped priority to the highest valid one
+ *    -# When low priority stream is created
+ *      - Expected output: valid priority 
+ *    -# When stream priority is lower than available
+ *      - Expected output: clamped priority to the lowest valid one
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetPriority.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetPriority_happy") {
   int priority_low = 0;
@@ -80,16 +98,33 @@ TEST_CASE("Unit_hipStreamGetPriority_happy") {
 }
 
 /**
- * both stream and priority passed as nullptr.
+ * Test Description
+ * ------------------------
+ *  - Verifies the case when both stream and priority pointers are `nullptr`
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetPriority.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetPriority_nullptr_nullptr") {
   auto res = hipStreamGetPriority(nullptr,nullptr);
   REQUIRE(res == hipErrorInvalidValue);
 }
 
-
 /**
- * valid stream and priority passed as nullptr.
+ * Test Description
+ * ------------------------
+ *  - Verifies the case when priority pointer is `nullptr`
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetPriority.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetPriority_stream_nullptr") {
   hipStream_t stream = nullptr;
@@ -101,9 +136,17 @@ TEST_CASE("Unit_hipStreamGetPriority_stream_nullptr") {
   HIP_CHECK(hipStreamDestroy(stream));
 }
 
-
 /**
- * nullptr stream and valid priority
+ * Test Description
+ * ------------------------
+ *  - Verifies the case when stream pointer is `nullptr`
+ *    - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetPriority.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetPriority_nullptr_priority") {
   int priority = -1;
@@ -111,7 +154,15 @@ TEST_CASE("Unit_hipStreamGetPriority_nullptr_priority") {
 }
 
 /**
- * both stream and priority passed as valid.
+ * Test Description
+ * ------------------------
+ *  - Both stream and priority pointers are valid.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetPriority.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetPriority_stream_priority") {
   int priority = -1;
@@ -125,7 +176,16 @@ TEST_CASE("Unit_hipStreamGetPriority_stream_priority") {
 
 #if HT_AMD
 /**
- * Create stream with CUMask and check priority is returned as expected.
+ * Test Description
+ * ------------------------
+ *  - Create stream with CU mask and check priority is returned as expected.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetPriority.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetPriority_StreamsWithCUMask") {
   hipStream_t stream{};

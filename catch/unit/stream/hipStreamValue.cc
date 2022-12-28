@@ -227,6 +227,34 @@ template <typename UIntT, PtrType ptrTypeValue> struct TestParams {
   constexpr static PtrType ptrType = ptrTypeValue;
 };
 
+/**
+ * @addtogroup hipStreamWriteValue32 hipStreamWriteValue32
+ * @{
+ * @ingroup StreamMTest
+ * `hipStreamWriteValue32(hipStream_t stream, void* ptr, uint32_t value, unsigned int flags)` -
+ * Enqueues a write command to the stream, write operation is performed after all earlier commands
+ * on this stream have completed the execution.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipStreamValue_Negative_InvalidMemory
+ *  - @ref Unit_hipStreamValue_Negative_UninitializedStream
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Write a value to a GPU visible pointer.
+ *  - Check if write vas valid for memory types:
+ *    -# Registered memory
+ *    -# Device memory
+ *    -# Signal memory
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamValue.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 #if HT_AMD
 TEMPLATE_TEST_CASE("Unit_hipStreamValue_Write", "", (TestParams<uint32_t, PtrType::HostPtr>),
                    (TestParams<uint32_t, PtrType::DevicePtr>),
@@ -270,6 +298,11 @@ TEMPLATE_TEST_CASE("Unit_hipStreamValue_Write", "", (TestParams<uint32_t, PtrTyp
   // Cleanup
   HIP_CHECK(hipStreamDestroy(stream));
 }
+
+/**
+ * End doxygen group hipStreamWriteValue32.
+ * @}
+ */
 
 template <bool isBlocking, typename UIntT, typename TestPtr>
 void syncAndCheckData(hipStream_t stream, UIntT* dataPtr, TestPtr signalPtr, size_t offset,
@@ -467,7 +500,34 @@ DEFINE_STREAM_WAIT_VAL_TEST_CASES_INT64("NoMask_Nor",
                                                     0xbddbddbdbddbddbd, 0xbddbddbdbddbddb3))
 #undef DEFINE_STREAM_WAIT_VAL_TEST_CASES_INT64
 
-// Negative Tests
+/**
+ * @addtogroup hipStreamWaitValue32 hipStreamWaitValue32
+ * @{
+ * @ingroup StreamMTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments for [hipStreamWriteValue32](@ref hipStreamWriteValue32):
+ *    -# When memory pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *  - Validates handling of invalid arguments for [hipStreamWriteValue64](@ref hipStreamWriteValue64):
+ *    -# When memory pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *  - Validates handling of invalid arguments for [hipStreamWaitValue32](@ref hipStreamWaitValue32):
+ *    -# When memory pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *  - Validates handling of invalid arguments for [hipStreamWaitValue64](@ref hipStreamWaitValue64):
+ *    -# When memory pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamValue.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamValue_Negative_InvalidMemory") {
   if (!streamWaitValueSupported()) {
     HipTest::HIP_SKIP_TEST("hipStreamWaitValue not supported on this device.");
@@ -499,6 +559,28 @@ TEST_CASE("Unit_hipStreamValue_Negative_InvalidMemory") {
   HIP_CHECK(hipStreamDestroy(stream));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of uninitialized stream for [hipStreamWriteValue32](@ref hipStreamWriteValue32):
+ *    -# When stream is uninitialized
+ *      - Expected output: return `hipErrorContextIsDestroyed`
+ *  - Validates handling of uninitialized stream for [hipStreamWriteValue64](@ref hipStreamWriteValue64):
+ *    -# When stream is uninitialized
+ *      - Expected output: return `hipErrorContextIsDestroyed`
+ *  - Validates handling of uninitialized stream for [hipStreamWaitValue32](@ref hipStreamWaitValue32):
+ *    -# When stream is uninitialized
+ *      - Expected output: return `hipErrorContextIsDestroyed`
+ *  - Validates handling of uninitialized stream for [hipStreamWaitValue64](@ref hipStreamWaitValue64):
+ *    -# When stream is uninitialized
+ *      - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamValue.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipStreamValue_Negative_UninitializedStream", "", uint32_t, uint64_t) {
   if (!streamWaitValueSupported()) {
     HipTest::HIP_SKIP_TEST("hipStreamWaitValue not supported on this device.");
@@ -532,6 +614,22 @@ TEMPLATE_TEST_CASE("Unit_hipStreamValue_Negative_UninitializedStream", "", uint3
   HIP_CHECK(hipHostUnregister(hostPtr.get()));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid flags for [hipStreamWaitValue32](@ref hipStreamWaitValue32):
+ *    -# When flags are not in valid range of values
+ *      - Expected output: return `hipErrorInvalidValue`
+ *  - Validates handling of invalid flags for [hipStreamWaitValue64](@ref hipStreamWaitValue64):
+ *    -# When flags are not in valid range of values
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamValue.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipStreamValue_Negative_InvalidFlag", "", uint32_t, uint64_t) {
   if (!streamWaitValueSupported()) {
     HipTest::HIP_SKIP_TEST("hipStreamWaitValue not supported on this device.");
@@ -557,3 +655,8 @@ TEMPLATE_TEST_CASE("Unit_hipStreamValue_Negative_InvalidFlag", "", uint32_t, uin
   HIP_CHECK(hipHostUnregister(hostPtr.get()));
   HIP_CHECK(hipStreamDestroy(stream));
 }
+
+/**
+ * End doxygen group hipStreamWaitValue32.
+ * @}
+ */

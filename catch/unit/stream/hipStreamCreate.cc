@@ -19,6 +19,25 @@ THE SOFTWARE.
 
 #include "streamCommon.hh"
 
+/**
+ * @addtogroup hipStreamCreate hipStreamCreate
+ * @{
+ * @ingroup StreamTest
+ * `hipStreamCreate(hipStream_t* stream)` -
+ * Create an asynchronous stream.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Create valid stream and check its flags and priority correctness.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamCreate_default") {
   int id = GENERATE(range(0, HipTest::getDeviceCount()));
   HIP_CHECK(hipSetDevice(id));
@@ -30,6 +49,19 @@ TEST_CASE("Unit_hipStreamCreate_default") {
   HIP_CHECK(hipStreamDestroy(stream));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate handling of invalid arguments:
+ *    -# When output pointer to the stream is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamCreate_Negative") {
   REQUIRE(hipErrorInvalidValue == hipStreamCreate(nullptr));
 }

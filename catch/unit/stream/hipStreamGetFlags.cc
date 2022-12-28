@@ -16,19 +16,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/**
-Testcase Scenarios :
-1) Test flag value of stream created with hipStreamCreateWithFlags/
- /hipStreamCreate/hipStreamCreateWithPriority.
-2) Negative tests for hipStreamGetFlags api.
-3) Test flag value when streams created with CUMask.
-*/
 
 #include <hip_test_common.hh>
 
 /**
- * @brief Check that hipStreamGetFlags returns the same flags that were used to create the stream.
- *
+ * @addtogroup hipStreamGetFlags hipStreamGetFlags
+ * @{
+ * @ingroup StreamTest
+ * `hipStreamGetFlags(hipStream_t stream, unsigned int* flags)` -
+ * Return flags associated with this stream.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that the returned flags are the same as the ones used to create streams.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetFlags_Basic") {
   unsigned int expectedFlag = GENERATE(hipStreamDefault, hipStreamNonBlocking);
@@ -42,8 +50,19 @@ TEST_CASE("Unit_hipStreamGetFlags_Basic") {
 }
 
 /**
- * @brief Negative scenarios for hipStreamGetFlags.
- *
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When stream is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When output pointer to flags is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetFlags_Negative") {
   hipStream_t validStream;
@@ -68,7 +87,16 @@ TEST_CASE("Unit_hipStreamGetFlags_Negative") {
 
 #if HT_AMD
 /**
- * Test flag value when streams created with CUMask.
+ * Test Description
+ * ------------------------
+ *  - Create stream with CU mask.
+ *  - Check that flags are valid.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamGetFlags_StreamsCreatedWithCUMask") {
   hipStream_t stream;

@@ -21,9 +21,29 @@ THE SOFTWARE.
 #include "streamCommon.hh"
 
 /**
- * @brief Check that querying a stream with no work returns hipSuccess
- *
- **/
+ * @addtogroup hipStreamQuery hipStreamQuery
+ * @{
+ * @ingroup StreamTest
+ * `hipStreamQuery(hipStream_t stream)` -
+ * Return `hipSuccess` if all of the operations in the specified stream have completed, or
+ * `hipErrorNotReady` if not.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Query a stream with no work:
+ *    -# When the stream is `nullptr`
+ *      - Expected output: return `hipSuccess`
+ *    -# When the stream is created
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamQuery.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamQuery_WithNoWork") {
   hipStream_t stream{nullptr};
 
@@ -39,9 +59,20 @@ TEST_CASE("Unit_hipStreamQuery_WithNoWork") {
 }
 
 /**
- * @brief Check that querying a stream with finished work returns hipSuccess
- *
- **/
+ * Test Description
+ * ------------------------
+ *  - Query a stream with finished work:
+ *    -# When the stream is `nullptr`
+ *      - Expected output: return `hipSuccess`
+ *    -# When the stream is created
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamQuery.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamQuery_WithFinishedWork") {
   hipStream_t stream{nullptr};
 
@@ -63,11 +94,20 @@ TEST_CASE("Unit_hipStreamQuery_WithFinishedWork") {
 }
 
 #if !HT_NVIDIA
+// Test removed for Nvidia devices because it returns unexpected error
+
 /**
- * @brief Check that submitting work to a destroyed stream sets its status as
- * hipErrorContextIsDestroyed
- *
- * Test removed for Nvidia devices because it returns unexpected error
+ * Test Description
+ * ------------------------
+ *  - Query a stream that has been destroyed previously
+ *    - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamQuery.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamQuery_WithDestroyedStream") {
   hipStream_t stream{nullptr};
@@ -77,10 +117,17 @@ TEST_CASE("Unit_hipStreamQuery_WithDestroyedStream") {
 }
 
 /**
- * @brief Check that submitting work to an uninitialized stream sets its status as
- * hipErrorContextIsDestroyed
- *
- * Test removed for Nvidia devices because it returns unexpected error
+ * Test Description
+ * ------------------------
+ *  - Query an uninitialized stream
+ *    - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamQuery.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamQuery_WithUninitializedStream") {
   hipStream_t stream{reinterpret_cast<hipStream_t>(0xFFFF)};
@@ -89,11 +136,18 @@ TEST_CASE("Unit_hipStreamQuery_WithUninitializedStream") {
 #endif
 
 #if HT_AMD /* Disabled because frequency based wait is timing out on nvidia platforms */
-
 /**
- * @brief Check that submitting work to a stream sets the status of the nullStream to
- * hipErrorNotReady
- *
+ * Test Description
+ * ------------------------
+ *  - Query a null stream while another stream has submitted work that has not finished yet
+ *    - Expected output: return `hipErrorNotReady`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamQuery.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamQuery_SubmitWorkOnStreamAndQueryNullStream") {
   {
@@ -110,9 +164,17 @@ TEST_CASE("Unit_hipStreamQuery_SubmitWorkOnStreamAndQueryNullStream") {
 }
 
 /**
- * @brief Check that submitting work to the nullStream properly sets its status as
- * hipErrorNotReady.
- *
+ * Test Description
+ * ------------------------
+ *  - Query a null stream with submitted work that has not finished yet
+ *    - Expected output: return `hipErrorNotReady`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamQuery.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamQuery_NullStreamQuery") {
   HIP_CHECK(hipStreamQuery(hip::nullStream));
@@ -123,9 +185,17 @@ TEST_CASE("Unit_hipStreamQuery_NullStreamQuery") {
 }
 
 /**
- * @brief Check that querying a stream with pending work returns hipErrorNotReady
- *
- **/
+ * Test Description
+ * ------------------------
+ *  - Query a stream with pending work
+ *    - Expected output: return `hipErrorNotReady`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamQuery.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamQuery_WithPendingWork") {
   hipStream_t waitingStream{nullptr};
   HIP_CHECK(hipStreamCreate(&waitingStream));

@@ -19,14 +19,44 @@ THE SOFTWARE.
 #include <chrono>
 #include <hip_test_common.hh>
 
-namespace hipStreamDestroyTests {
+/**
+ * @addtogroup hipStreamDestroy hipStreamDestroy
+ * @{
+ * @ingroup StreamTest
+ * `hipStreamDestroy(hipStream_t stream)` -
+ * Destroys the specified stream.
+ */
 
+namespace hipStreamDestroyTests {
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that the stream can be destroyed without errors.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamDestroy.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamDestroy_Default") {
   hipStream_t stream{};
   HIP_CHECK(hipStreamCreate(&stream));
   HIP_CHECK(hipStreamDestroy(stream));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Tries to destroy already destroyed stream:
+ *    - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamDestroy.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamDestroy_Negative_DoubleDestroy") {
   hipStream_t stream{};
   HIP_CHECK(hipStreamCreate(&stream));
@@ -34,6 +64,18 @@ TEST_CASE("Unit_hipStreamDestroy_Negative_DoubleDestroy") {
   HIP_CHECK_ERROR(hipStreamDestroy(stream), hipErrorContextIsDestroyed);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Tries to destroy null stream:
+ *    - Expected output: return `hipErrorInvalidResourceHandle`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamDestroy.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamDestroy_Negative_NullStream") {
   HIP_CHECK_ERROR(hipStreamDestroy(nullptr), hipErrorInvalidResourceHandle);
 }
@@ -53,6 +95,19 @@ __global__ void setToOne(int* x, size_t size) {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Create a default stream.
+ *  - Run a simple kernel that finishes quickly.
+ *  - Destroy the created stream successfully.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamDestroy.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamDestroy_WithFinishedWork") {
   hipStream_t stream{};
   HIP_CHECK(hipStreamCreate(&stream));
@@ -71,6 +126,20 @@ TEST_CASE("Unit_hipStreamDestroy_WithFinishedWork") {
 // hipStreamDestroy should return immediately then clean up the resources when the stream is empty
 // of work
 #if HT_AMD /* Disabled because frequency based wait is timing out on nvidia platforms */
+/**
+ * Test Description
+ * ------------------------
+ *  - Create a default stream.
+ *  - Run a kernel with delay that runs for 500ms.
+ *  - Destroy the created stream.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamDestroy.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipStreamDestroy_WithPendingWork") {
 
   hipStream_t stream{};

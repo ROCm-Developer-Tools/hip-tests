@@ -20,11 +20,26 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include "streamCommon.hh"
 
+/**
+ * @addtogroup hipStreamSynchronize hipStreamSynchronize
+ * @{
+ * @ingroup StreamTest
+ * `hipStreamSynchronize(hipStream_t stream)` -
+ * Wait for all commands in stream to complete.
+ */
+
 namespace hipStreamSynchronizeTest {
 
 /**
- * @brief Check that hipStreamSynchronize handles empty streams properly.
- *
+ * Test Description
+ * ------------------------
+ *  - Synchronize an empty stream.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamSynchronize_EmptyStream") {
   hipStream_t stream;
@@ -34,11 +49,20 @@ TEST_CASE("Unit_hipStreamSynchronize_EmptyStream") {
 }
 
 #if !HT_NVIDIA
+// Test removed for Nvidia devices because it returns unexpected error.
+
 /**
- * @brief Check that synchronization of uninitialized stream sets its status to
- * hipErrorContextIsDestroyed
- *
- * Test removed for Nvidia devices because it returns unexpected error
+ * Test Description
+ * ------------------------
+ *  - Synchronize an uninitialized stream
+ *    - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamSynchronize_UninitializedStream") {
   hipStream_t stream{reinterpret_cast<hipStream_t>(0xFFFF)};
@@ -49,9 +73,16 @@ TEST_CASE("Unit_hipStreamSynchronize_UninitializedStream") {
 #if HT_AMD /* Disabled because frequency based wait is timing out on nvidia platforms */
 
 /**
- * @brief Check that all work executing in a stream is finished after a call to
- * hipStreamSynchronize.
- *
+ * Test Description
+ * ------------------------
+ *  - Check that all work executing in a stream is finished after synchronization.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamSynchronize_FinishWork") {
   const hipStream_t explicitStream = reinterpret_cast<hipStream_t>(-1);
@@ -72,7 +103,15 @@ TEST_CASE("Unit_hipStreamSynchronize_FinishWork") {
 }
 
 /**
- * @brief Check that synchronizing the nullStream implicitly synchronizes all executing streams.
+ * Test Description
+ * ------------------------
+ *  - Check that synchronizing the nullStream implicitly synchronizes all executing streams.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamSynchronize_NullStreamSynchronization") {
   int totalStreams = 10;
@@ -108,9 +147,18 @@ TEST_CASE("Unit_hipStreamSynchronize_NullStreamSynchronization") {
 }
 
 /**
- * @brief Check that synchronizing one stream does implicitly synchronize other streams.
- *        Check that submiting work to the nullStream does not affect synchronization of other
- * streams. Check that querying the nullStream does not affect synchronization of other streams.
+ * Test Description
+ * ------------------------
+ *  - Check that synchronizing one stream does not synchronize other streams.
+ *  - Check that submiting work to the nullStream does not affect synchronization of other streams.
+ *  - Check that querying the nullStream does not affect synchronization of other streams.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamSynchronize_SynchronizeStreamAndQueryNullStream") {
 #if HT_AMD
@@ -152,9 +200,17 @@ TEST_CASE("Unit_hipStreamSynchronize_SynchronizeStreamAndQueryNullStream") {
 }
 
 /**
- * @brief Check that synchronizing the nullStream also synchronizes the hipStreamPerThread
- * special stream.
- *
+ * Test Description
+ * ------------------------
+ *  - Check that synchronizing the null stream also synchronizes the
+ *    per thread special stream.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamSynchronize.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipStreamSynchronize_NullStreamAndStreamPerThread") {
   HipTest::runKernelForDuration(std::chrono::milliseconds(500), hip::streamPerThread);

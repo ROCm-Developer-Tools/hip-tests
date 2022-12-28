@@ -19,6 +19,13 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <iostream>
 #include <vector>
+
+/**
+ * @addtogroup hipStreamCreate hipStreamCreate
+ * @{
+ * @ingroup StreamTest
+ */
+
 constexpr int NN = 1 << 21;
 __global__ void kernel_do_nothing(__attribute__((unused))int a) {
   // empty kernel
@@ -36,6 +43,18 @@ __global__ void nKernel(float* y) {
   size_t tid{threadIdx.x};
   y[tid] = y[tid] + 1.0f;
 }
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate creation of multiple streams on the same device.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipMultiStream.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMultiStream_sameDevice") {
   constexpr int num_streams{8};
   hipStream_t streams[num_streams];
@@ -60,6 +79,17 @@ TEST_CASE("Unit_hipMultiStream_sameDevice") {
   REQUIRE(x == Approx(y));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate creation of multiple streams on multiple devices.
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipMultiStream.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMultiStream_multimeDevice") {
   constexpr int nLoops = 50000;
   constexpr int nStreams = 2;

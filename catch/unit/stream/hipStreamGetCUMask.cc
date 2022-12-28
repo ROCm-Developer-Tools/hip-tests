@@ -17,20 +17,29 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-1) Test to verify hipExtStreamGetCUMask api returning default CU Mask or global CU Mask.
-2) Test to verify hipExtStreamGetCUMask api returns custom mask set.
-3) Negative tests for hipExtStreamGetCUMask api.
-*/
-
 #include <hip_test_common.hh>
 #include <vector>
 
+/**
+ * @addtogroup hipExtStreamGetCUMask hipExtStreamGetCUMask
+ * @{
+ * @ingroup StreamTest
+ * `hipExtStreamGetCUMask(hipStream_t stream, uint32_t cuMaskSize, uint32_t* cuMask)` -
+ * Get CU mask associated with an asynchronous stream.
+ */
 
 /**
- * Scenario to verify hipExtStreamGetCUMask api returning default CU Mask or global CU Mask.
- * Scenario to verify hipExtStreamGetCUMask api returns custom mask set.
+ * Test Description
+ * ------------------------
+ *  - Verifies that stream can be created with different CU mask values:
+ *    - Verify with default CU mask or global CU mask
+ *    - Verify with custom mask set
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetCUMask.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipExtStreamGetCUMask_verifyDefaultAndCustomMask") {
   constexpr int maxNum = 6;
@@ -170,7 +179,19 @@ TEST_CASE("Unit_hipExtStreamGetCUMask_verifyDefaultAndCustomMask") {
 }
 
 /**
- * Negative tests for hipExtStreamGetCUMask.
+ * Test Description
+ * ------------------------
+ *  - Verifies handling of invalid arguments:
+ *    -# When pointer to the CU mask is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When CU mask size is 0
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/stream/hipStreamGetCUMask.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipExtStreamGetCUMask_Negative") {
   hipError_t ret;
