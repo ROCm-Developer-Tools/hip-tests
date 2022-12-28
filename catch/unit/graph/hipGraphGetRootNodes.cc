@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -28,6 +28,11 @@ Functional ::
  nodes list will be set to NULL, and the number of nodes actually obtained will be returned in NumRootNodes.
  4) Create a graph with stream capture done on multiple dependent streams.
  Verify root nodes of created graph are matching the operations pushed which doesn't have dependencies.
+ 5) Functional Test to validate number of root nodes when dependencies in the graph are dynamically varied.
+ 6) Functional Test to validate number of root nodes when dependencies in the graph are dynamically varied
+ in a cloned graph.
+ 7) Functional Test to validate number of root nodes when a graph with N independent nodes is added as a
+ child node to another graph.
 
 Argument Validation ::
  1) Pass graph as nullptr and verify api returns error code.
@@ -40,6 +45,12 @@ Argument Validation ::
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
+
+#define NUM_OF_DUMMY_NODES 8
+
+static __global__ void dummyKernel() {
+  return;
+}
 
 /**
  * Functional Test for API fetching root node list
@@ -345,4 +356,111 @@ TEST_CASE("Unit_hipGraphGetRootNodes_ParamValidation") {
   free(nodes);
   HIP_CHECK(hipFree(A_d));
   HIP_CHECK(hipFree(C_d));
+}
+
+/**
+ * Functional Test to validate number of root nodes when dependencies
+ * in the graph are dynamically varied.
+ */
+TEST_CASE("Unit_hipGraphGetRootNodes_Complx_NumRootNodes") {
+  hipGraph_t graph;
+  hipGraphNode_t kernelnode[NUM_OF_DUMMY_NODES];
+  hipKernelNodeParams kernelNodeParams[NUM_OF_DUMMY_NODES];
+  HIP_CHECK(hipGraphCreate(&graph, 0));
+  // Create graph with no dependencies
+  for (int i = 0; i < NUM_OF_DUMMY_NODES; i++) {
+    void* kernelArgs[] = {nullptr};
+    kernelNodeParams[i].func = reinterpret_cast<void *>(dummyKernel);
+    kernelNodeParams[i].gridDim = dim3(1);
+    kernelNodeParams[i].blockDim = dim3(1);
+    kernelNodeParams[i].sharedMemBytes = 0;
+    kernelNodeParams[i].kernelParams = reinterpret_cast<void**>(kernelArgs);
+    kernelNodeParams[i].extra = nullptr;
+    HIP_CHECK(hipGraphAddKernelNode(&kernelnode[i], graph, nullptr,
+                                    0, &kernelNodeParams[i]));
+  }
+  size_t numRootNodes{};
+  HIP_CHECK(hipGraphGetRootNodes(graph, nullptr, &numRootNodes));
+  REQUIRE(numRootNodes == NUM_OF_DUMMY_NODES);
+  // Start creating dependencies in a chain
+  for (size_t i = 0; i < (NUM_OF_DUMMY_NODES - 1); i++) {
+    numRootNodes = 0;
+    HIP_CHECK(hipGraphAddDependencies(graph, &kernelnode[i],
+            &kernelnode[i+1], 1));
+    HIP_CHECK(hipGraphGetRootNodes(graph, nullptr, &numRootNodes));
+    REQUIRE(numRootNodes == (NUM_OF_DUMMY_NODES - i - 1));
+  }
+  HIP_CHECK(hipGraphDestroy(graph));
+}
+
+/**
+ * Functional Test to validate number of root nodes when dependencies
+ * in the graph are dynamically varied in a cloned graph.
+ */
+TEST_CASE("Unit_hipGraphGetRootNodes_Complx_NumRootNodes_ClonedGrph") {
+  hipGraph_t graph, clonedgraph;
+  hipGraphNode_t kernelnode[NUM_OF_DUMMY_NODES];
+  hipKernelNodeParams kernelNodeParams[NUM_OF_DUMMY_NODES];
+  HIP_CHECK(hipGraphCreate(&graph, 0));
+  HIP_CHECK(hipGraphCreate(&clonedgraph, 0));
+  // Create graph with no dependencies
+  for (int i = 0; i < NUM_OF_DUMMY_NODES; i++) {
+    void* kernelArgs[] = {nullptr};
+    kernelNodeParams[i].func = reinterpret_cast<void *>(dummyKernel);
+    kernelNodeParams[i].gridDim = dim3(1);
+    kernelNodeParams[i].blockDim = dim3(1);
+    kernelNodeParams[i].sharedMemBytes = 0;
+    kernelNodeParams[i].kernelParams = reinterpret_cast<void**>(kernelArgs);
+    kernelNodeParams[i].extra = nullptr;
+    HIP_CHECK(hipGraphAddKernelNode(&kernelnode[i], graph, nullptr,
+                                    0, &kernelNodeParams[i]));
+  }
+  size_t numRootNodes{};
+  HIP_CHECK(hipGraphClone(&clonedgraph, graph));
+  HIP_CHECK(hipGraphGetRootNodes(clonedgraph, nullptr, &numRootNodes));
+  REQUIRE(numRootNodes == NUM_OF_DUMMY_NODES);
+  // Start creating dependencies in a chain
+  for (size_t i = 0; i < (NUM_OF_DUMMY_NODES - 1); i++) {
+    numRootNodes = 0;
+    hipGraphNode_t node1, node2;
+    HIP_CHECK(hipGraphNodeFindInClone(&node1, kernelnode[i], clonedgraph));
+    HIP_CHECK(hipGraphNodeFindInClone(&node2, kernelnode[i+1], clonedgraph));
+    HIP_CHECK(hipGraphAddDependencies(clonedgraph, &node1, &node2, 1));
+    HIP_CHECK(hipGraphGetRootNodes(clonedgraph, nullptr, &numRootNodes));
+    REQUIRE(numRootNodes == (NUM_OF_DUMMY_NODES - i - 1));
+  }
+  HIP_CHECK(hipGraphDestroy(clonedgraph));
+  HIP_CHECK(hipGraphDestroy(graph));
+}
+
+/**
+ * Functional Test to validate number of root nodes when a graph with N
+ * independent nodes is added as a child node to another graph.
+ */
+TEST_CASE("Unit_hipGraphGetRootNodes_Complx_NRootNodesAsChildGraph") {
+  hipGraph_t graph, graph1;
+  hipGraphNode_t kernelnode[NUM_OF_DUMMY_NODES];
+  hipKernelNodeParams kernelNodeParams[NUM_OF_DUMMY_NODES];
+  hipGraphNode_t child_node;
+  HIP_CHECK(hipGraphCreate(&graph, 0));
+  HIP_CHECK(hipGraphCreate(&graph1, 0));
+  // Create graph with no dependencies
+  for (int i = 0; i < NUM_OF_DUMMY_NODES; i++) {
+    void* kernelArgs[] = {nullptr};
+    kernelNodeParams[i].func = reinterpret_cast<void *>(dummyKernel);
+    kernelNodeParams[i].gridDim = dim3(1);
+    kernelNodeParams[i].blockDim = dim3(1);
+    kernelNodeParams[i].sharedMemBytes = 0;
+    kernelNodeParams[i].kernelParams = reinterpret_cast<void**>(kernelArgs);
+    kernelNodeParams[i].extra = nullptr;
+    HIP_CHECK(hipGraphAddKernelNode(&kernelnode[i], graph, nullptr,
+                                    0, &kernelNodeParams[i]));
+  }
+  HIP_CHECK(hipGraphAddChildGraphNode(&child_node, graph1,
+                                      nullptr, 0, graph));
+  size_t numRootNodes{};
+  HIP_CHECK(hipGraphGetRootNodes(graph1, nullptr, &numRootNodes));
+  REQUIRE(numRootNodes == 1);
+  HIP_CHECK(hipGraphDestroy(graph1));
+  HIP_CHECK(hipGraphDestroy(graph));
 }
