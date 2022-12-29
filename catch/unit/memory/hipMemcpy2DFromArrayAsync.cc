@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -17,356 +17,358 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-This file verifies the following scenarios of hipMemcpy2DFromArrayAsync API
-1. Negative Scenarios
-2. Extent Validation Scenarios
-3. hipMemcpy2DFromArrayAsync Basic Scenario
-4. Pinned Memory scenarios on same and peer GPU
-5. Device Context change scenario where memory is allocated in
-   one GPU and stream is created in peer GPU.
-*/
+#include "array_memcpy_tests_common.hh"
 
+#include <hip/hip_runtime_api.h>
 #include <hip_test_common.hh>
-#include <hip_test_checkers.hh>
+#include <resource_guards.hh>
+#include <utils.hh>
 
-
-static constexpr auto NUM_W{10};
-static constexpr auto NUM_H{10};
-
-/*
- * This testcase copies the data from host to device of
-   hipMemcpy2DFromArrayAsync API
- * INPUT:  Copying Host variable hData(Initialized with value Phi(1.618))
- *         --> A_d device variable
- * OUTPUT: For validating the result,Copying A_d device variable
- *         --> A_h host variable
- *         and verifying A_h with Phi
+/**
+ * @addtogroup hipMemcpy2DFromArrayAsync hipMemcpy2DFromArrayAsync
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemcpy2DFromArrayAsync( void* dst, size_t dpitch, hipArray_const_t src, size_t wOffset,
+ * size_t hOffset, size_t width, size_t height, hipMemcpyKind kind, hipStream_t stream __dparm(0))` -
+ * Copies data between host and device asynchronously.
  */
-TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_Basic") {
-  HIP_CHECK(hipSetDevice(0));
-  hipArray *A_d{nullptr};
-  size_t width{sizeof(float)*NUM_W};
-  float *A_h{nullptr}, *hData{nullptr};
-  hipStream_t stream;
 
-  // Initialization of variables
-  HipTest::initArrays<float>(nullptr, nullptr, nullptr,
-                             &A_h, &hData, nullptr,
-                             width*NUM_H, false);
-  hipChannelFormatDesc desc = hipCreateChannelDesc<float>();
-  HIP_CHECK(hipMallocArray(&A_d, &desc, NUM_W, NUM_H, hipArrayDefault));
-  HipTest::setDefaultData<float>(width*NUM_H, A_h, hData, nullptr);
-  HIP_CHECK(hipStreamCreate(&stream));
-
-  HIP_CHECK(hipMemcpy2DToArray(A_d, 0, 0, hData, width,
-                                    width, NUM_H,
-                                    hipMemcpyHostToDevice));
-  SECTION("Calling hipMemcpy2DFromArrayAsync() with user declared stream obj") {
-    HIP_CHECK(hipMemcpy2DFromArrayAsync(A_h, width, A_d,
-                                   0, 0, width, NUM_H,
-                                   hipMemcpyDeviceToHost, stream));
-    HIP_CHECK(hipStreamSynchronize(stream));
-  }
-  SECTION("Calling hipMemcpy2DFromArrayAsync() with hipStreamPerThread") {
-    HIP_CHECK(hipMemcpy2DFromArrayAsync(A_h, width, A_d,
-                                   0, 0, width, NUM_H,
-                                   hipMemcpyDeviceToHost, hipStreamPerThread));
-    HIP_CHECK(hipStreamSynchronize(hipStreamPerThread));
-  }
-  REQUIRE(HipTest::checkArray(A_h, hData, NUM_W, NUM_H) == true);
-
-  // Cleaning the memory
-  HIP_CHECK(hipFreeArray(A_d));
-  HIP_CHECK(hipStreamDestroy(stream));
-  HipTest::freeArrays<float>(nullptr, nullptr, nullptr,
-                             A_h, hData, nullptr, false);
-}
-
-/*
- * This testcase verifies the extent validation scenarios
- * of hipMemcpy2DFromArrayAsync API
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates basic behaviour for copying array to the 2D memory
+ *    between host and device, asynchronously.
+ *  - The test is run for a various width/height sizes, host allocation types
+ *    and flag combinations:
+ *      -# Array on the device to host
+ *      -# Array to host with default kind
+ *      -# Array to device
+ *        - Peer access disabled
+ *        - Peer access enabled
+ *        - Platform specific (NVIDIA)
+ *      -# Array to device with default kind
+ *        - Peer access disabled
+ *        - Peer access enabled
+ *        - Platform specific (NVIDIA)
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpy2DFromArrayAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_ExtentValidation") {
-  HIP_CHECK(hipSetDevice(0));
-  hipArray *A_d{nullptr};
-  size_t width{sizeof(float)*NUM_W};
-  float *A_h{nullptr}, *hData{nullptr}, *valData{nullptr};
-  hipStream_t stream;
+TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_Positive_Default") {
+  using namespace std::placeholders;
 
-  // Initialization of variables
-  HipTest::initArrays<float>(nullptr, nullptr, nullptr,
-                             &A_h, &hData, nullptr,
-                             width*NUM_H, false);
-  HipTest::initArrays<float>(nullptr, nullptr, nullptr,
-                             nullptr, &valData, nullptr,
-                             width*NUM_H, false);
-  hipChannelFormatDesc desc = hipCreateChannelDesc<float>();
-  HIP_CHECK(hipMallocArray(&A_d, &desc, NUM_W, NUM_H, hipArrayDefault));
-  HIP_CHECK(hipStreamCreate(&stream));
+  const auto stream_type = GENERATE(Streams::nullstream, Streams::perThread, Streams::created);
+  const StreamGuard stream_guard(stream_type);
+  const hipStream_t stream = stream_guard.stream();
 
-  SECTION("Destination width is 0") {
-    REQUIRE(hipMemcpy2DFromArrayAsync(A_h, 0, A_d,
-                                      0, 0, NUM_W*sizeof(float),
-                                      NUM_H, hipMemcpyDeviceToHost, stream)
-                                      != hipSuccess);
-  }
-  // hipMemcpy2DFromArrayAsync API would return success for
-  // width and height as 0
-  // and does not perform any copy
-  // Validating the result with the initialized value
-  // 1.Initializing A_d with Pi value
-  // 2.copying A_d-->hData variable
-  //   with height 0(copy will not be performed)
-  // 3 validating hData<-->A_h which will not be equal as copy is not done.
-  SECTION("Height is 0") {
-    HIP_CHECK(hipMemcpy2DToArray(A_d, 0, 0,
-                               A_h, width, width,
-                               NUM_H, hipMemcpyHostToDevice));
-    HIP_CHECK(hipMemcpy2DFromArrayAsync(hData, width, A_d,
-                                   0, 0, NUM_W*sizeof(float),
-                                   0, hipMemcpyDeviceToHost, stream));
-    HIP_CHECK(hipStreamSynchronize(stream));
-    REQUIRE(HipTest::checkArray(hData, valData, NUM_W, NUM_H) == true);
-  }
-  // hipMemcpy2DFromArrayAsync API would return success for
-  //   width and height as 0
-  // and does not perform any copy
-  // Validating the result with the initialized value
-  // 1.Initializing A_d with Pi value
-  // 2.copying A_d-->hData variable
-  //   with width 0(copy will not be performed)
-  // 3 validating hData<-->A_h which will not be equal as copy is not done.
+  const auto width = GENERATE(16, 32, 48);
+  const auto height = GENERATE(1, 16, 32, 48);
 
-  SECTION("Width is 0") {
-    HIP_CHECK(hipMemcpy2DToArray(A_d, 0, 0,
-                               A_h, width, width,
-                               NUM_H, hipMemcpyHostToDevice));
-    HIP_CHECK(hipMemcpy2DFromArrayAsync(hData, width, A_d,
-                                        0, 0, 0,
-                                        NUM_H, hipMemcpyDeviceToHost, stream));
-    HIP_CHECK(hipStreamSynchronize(stream));
-    REQUIRE(HipTest::checkArray(hData, valData, NUM_W, NUM_H) == true);
+  SECTION("Array to host") {
+    Memcpy2DHostFromAShell<true, int>(
+        std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0, width * sizeof(int), height,
+                  hipMemcpyDeviceToHost, stream),
+        width, height, stream);
   }
 
-  // Cleaning the memory
-  HIP_CHECK(hipFreeArray(A_d));
-  HIP_CHECK(hipStreamDestroy(stream));
-  HipTest::freeArrays<float>(nullptr, nullptr, nullptr,
-                             A_h, hData, nullptr, false);
-  HipTest::freeArrays<float>(nullptr, nullptr, nullptr,
-                             nullptr, valData, nullptr, false);
-}
-/*
- * This Scenario Verifies hipMemcpy2DFromArrayAsync API by copying the
- * data from pinned host memory to device on same GPU
- * INPUT:  Copying Host variable PinnMem(Initialized with value "10" )
- *         --> A_d device variable
- * OUTPUT: For validating the result,Copying A_d device variable
- *         --> A_h host variable
- *         and verifying A_h with PinnedMem[0](i.e., 10)
- */
-TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_PinnedHostMemSameGpu") {
-  HIP_CHECK(hipSetDevice(0));
-  hipArray *A_d{nullptr};
-  constexpr auto def_val{10};
-  size_t width{sizeof(float)*NUM_W};
-  float *A_h{nullptr}, *PinnMem{nullptr};
-  hipStream_t stream;
-
-  // Initialization of variables
-  HipTest::initArrays<float>(nullptr, nullptr, nullptr,
-                             &A_h, nullptr, nullptr,
-                             width*NUM_H, false);
-  HIP_CHECK(hipHostMalloc(reinterpret_cast<void**>(&PinnMem), width * NUM_H));
-  hipChannelFormatDesc desc = hipCreateChannelDesc<float>();
-  HIP_CHECK(hipMallocArray(&A_d, &desc, NUM_W, NUM_H, hipArrayDefault));
-  HipTest::setDefaultData<float>(width*NUM_H, A_h, nullptr, nullptr);
-  for (int i = 0; i < NUM_W*NUM_H; i++) {
-    PinnMem[i] = def_val + i;
+  SECTION("Array to host with default kind") {
+    Memcpy2DHostFromAShell<true, int>(
+        std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0, width * sizeof(int), height,
+                  hipMemcpyDefault, stream),
+        width, height, stream);
   }
-  HIP_CHECK(hipStreamCreate(&stream));
-
-  HIP_CHECK(hipMemcpy2DToArray(A_d, 0, 0, PinnMem,
-                               width, width, NUM_H, hipMemcpyHostToDevice));
-  HIP_CHECK(hipMemcpy2DFromArrayAsync(A_h, width, A_d,
-                                      0, 0, width, NUM_H,
-                                      hipMemcpyDeviceToHost, stream));
-  HIP_CHECK(hipStreamSynchronize(stream));
-  REQUIRE(HipTest::checkArray(A_h, PinnMem, NUM_W, NUM_H) == true);
-
-  // Cleaning the memory
-  HIP_CHECK(hipFreeArray(A_d));
-  HIP_CHECK(hipHostFree(PinnMem));
-  HIP_CHECK(hipStreamDestroy(stream));
-  HipTest::freeArrays<float>(nullptr, nullptr, nullptr,
-                             A_h, nullptr, nullptr, false);
-}
-/*
- * This Scenario Verifies hipMemcpy2DFromArrayAsync API by copying the
- * data from pinned host memory to device from Peer GPU.
- * Device Memory is allocated in GPU 0 and the API is trigerred from GPU1
- * INPUT:  Initialize data, A_h --> A_d device variable
- *         whose memory is allocated in GPU 0
-           then A_d-->E_h  in GPU1
- * OUTPUT: validating the result by comparing A_h and E_h
- */
-TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_multiDevicePinnedHostMem") {
-  int numDevices = 0;
-  constexpr auto def_val{10};
-  HIP_CHECK(hipGetDeviceCount(&numDevices));
-  if (numDevices > 1) {
-    int canAccessPeer = 0;
-    HIP_CHECK(hipDeviceCanAccessPeer(&canAccessPeer, 0, 1));
-    if (canAccessPeer) {
-      HIP_CHECK(hipSetDevice(0));
-      hipArray *A_d{nullptr};
-      size_t width{sizeof(float)*NUM_W};
-      float *A_h{nullptr}, *E_h{nullptr};
-      hipStream_t stream;
-      HIP_CHECK(hipStreamCreate(&stream));
-
-      // Initialization of variables
-      HipTest::initArrays<float>(nullptr, nullptr, nullptr,
-          &A_h, nullptr, nullptr,
-          width*NUM_H, false);
-      hipChannelFormatDesc desc = hipCreateChannelDesc<float>();
-      HIP_CHECK(hipMallocArray(&A_d, &desc, NUM_W, NUM_H, hipArrayDefault));
-      HipTest::setDefaultData<float>(width*NUM_H, A_h, nullptr, nullptr);
-      HIP_CHECK(hipHostMalloc(reinterpret_cast<void**>(&E_h), width * NUM_H));
-      for (int i = 0; i < NUM_W*NUM_H; i++) {
-        E_h[i] = def_val + i;
-      }
-
-      HIP_CHECK(hipMemcpy2DToArray(A_d, 0, 0, A_h, width,
-                                   width, NUM_H, hipMemcpyHostToDevice));
-      HIP_CHECK(hipSetDevice(1));
-      HIP_CHECK(hipMemcpy2DFromArrayAsync(E_h, width, A_d,
-                                          0, 0, width, NUM_H,
-                                          hipMemcpyDeviceToHost, stream));
-      HIP_CHECK(hipStreamSynchronize(stream));
-      REQUIRE(HipTest::checkArray(A_h, E_h, NUM_W, NUM_H) == true);
-
-      // Cleaning the memory
-      HIP_CHECK(hipFreeArray(A_d));
-      HIP_CHECK(hipHostFree(E_h));
-      HIP_CHECK(hipStreamDestroy(stream));
-      HipTest::freeArrays<float>(nullptr, nullptr, nullptr,
-                                 A_h, nullptr, nullptr, false);
-    } else {
-      SUCCEED("Device Does not have P2P capability");
+#if HT_NVIDIA  // EXSWHTEC-213
+  SECTION("Array to device") {
+    SECTION("Peer access disabled") {
+      Memcpy2DDeviceFromAShell<true, false, int>(
+          std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0, width * sizeof(int), height,
+                    hipMemcpyDeviceToDevice, stream),
+          width, height, stream);
     }
-  } else {
-    SUCCEED("Number of devices are < 2");
-  }
-}
-
-/*
- * This scenario verifies the hipMemcpy2DFromArrayAsync API in case of device
- * context change.
- * Memory is allocated in GPU-0 and the API is triggered from GPU-1
- * INPUT:  Copying Host variable hData(Initial value Phi)
- *         --> A_d device variable
- *         whose memory is allocated in GPU 0
- * OUTPUT: For validating the result,Copying A_d device variable
- *         --> A_h host variable
- *         and verifying A_h with Phi
- * */
-TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_multiDeviceContextChange") {
-  int numDevices = 0;
-  HIP_CHECK(hipGetDeviceCount(&numDevices));
-  if (numDevices > 1) {
-    int canAccessPeer = 0;
-    HIP_CHECK(hipDeviceCanAccessPeer(&canAccessPeer, 0, 1));
-    if (canAccessPeer) {
-      HIP_CHECK(hipSetDevice(0));
-      hipArray *A_d{nullptr};
-      size_t width{sizeof(float)*NUM_W};
-      float *A_h{nullptr}, *hData{nullptr};
-      hipStream_t stream;
-
-      // Initialization of variables
-      HipTest::initArrays<float>(nullptr, nullptr, nullptr,
-          &A_h, &hData, nullptr,
-          width*NUM_H, false);
-      hipChannelFormatDesc desc = hipCreateChannelDesc<float>();
-      HIP_CHECK(hipMallocArray(&A_d, &desc, NUM_W, NUM_H, hipArrayDefault));
-      HipTest::setDefaultData<float>(width*NUM_H, A_h, hData, nullptr);
-
-      HIP_CHECK(hipSetDevice(1));
-      HIP_CHECK(hipStreamCreate(&stream));
-      HIP_CHECK(hipMemcpy2DToArray(A_d, 0, 0, hData, width, width,
-                                   NUM_H, hipMemcpyHostToDevice));
-
-      HIP_CHECK(hipMemcpy2DFromArrayAsync(A_h, width, A_d,
-                                          0, 0, width, NUM_H,
-                                          hipMemcpyDeviceToHost, stream));
-      HIP_CHECK(hipStreamSynchronize(stream));
-      REQUIRE(HipTest::checkArray(A_h, hData, NUM_W, NUM_H) == true);
-
-      // Cleaning the memory
-      HIP_CHECK(hipFreeArray(A_d));
-      HIP_CHECK(hipStreamDestroy(stream));
-      HipTest::freeArrays<float>(nullptr, nullptr, nullptr,
-                                 A_h, hData, nullptr, false);
-    } else {
-      SUCCEED("Device Does not have P2P capability");
+    SECTION("Peer access enabled") {
+      Memcpy2DDeviceFromAShell<true, true, int>(
+          std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0, width * sizeof(int), height,
+                    hipMemcpyDeviceToDevice, stream),
+          width, height, stream);
     }
-  } else {
-    SUCCEED("Number of devices are < 2");
   }
+
+  SECTION("Array to device with default kind") {
+    SECTION("Peer access disabled") {
+      Memcpy2DDeviceFromAShell<true, false, int>(
+          std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0, width * sizeof(int), height,
+                    hipMemcpyDefault, stream),
+          width, height, stream);
+    }
+    SECTION("Peer access enabled") {
+      Memcpy2DDeviceFromAShell<true, true, int>(
+          std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0, width * sizeof(int), height,
+                    hipMemcpyDefault, stream),
+          width, height, stream);
+    }
+  }
+#endif
 }
-/* This testcase verifies the negative scenarios
- * of hipMemcpy2DFromArrayAsync API
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that API is asynchronous regarding to host when copying
+ *    from device memory to device memory.
+ *  - Validates following memcpy directions:
+ *    -# Array to host
+ *    -# Array to device
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpy2DFromArrayAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
-TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_Negative") {
-  HIP_CHECK(hipSetDevice(0));
-  hipArray *A_d{nullptr};
-  size_t width{sizeof(float)*NUM_W};
-  float *A_h{nullptr}, *hData{nullptr};
-  hipStream_t stream;
-  HIP_CHECK(hipStreamCreate(&stream));
+TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_Positive_Synchronization_Behavior") {
+  using namespace std::placeholders;
+  HIP_CHECK(hipDeviceSynchronize());
 
-  // Initialization of variables
-  HipTest::initArrays<float>(nullptr, nullptr, nullptr,
-                             &A_h, &hData, nullptr,
-                             width*NUM_H, false);
-  HipTest::setDefaultData<float>(width*NUM_H, A_h, hData, nullptr);
-  hipChannelFormatDesc desc = hipCreateChannelDesc<float>();
-  HIP_CHECK(hipMallocArray(&A_d, &desc, NUM_W, NUM_H, hipArrayDefault));
+  SECTION("Array to host") {
+    const auto width = GENERATE(16, 32, 48);
+    const auto height = GENERATE(16, 32, 48);
 
-  SECTION("Nullptr to destination") {
-    REQUIRE(hipMemcpy2DFromArrayAsync(nullptr, width, A_d,
-                                      0, 0, width, NUM_H,
-                                      hipMemcpyDeviceToHost,
-                                      stream) != hipSuccess);
+    MemcpyAtoHPageableSyncBehavior(
+        std::bind(hipMemcpy2DFromArrayAsync, _1, width * sizeof(int), _2, 0, 0, width * sizeof(int),
+                  height, hipMemcpyDeviceToHost, nullptr),
+        width, height, false);
+    MemcpyAtoHPinnedSyncBehavior(
+        std::bind(hipMemcpy2DFromArrayAsync, _1, width * sizeof(int), _2, 0, 0, width * sizeof(int),
+                  height, hipMemcpyDeviceToHost, nullptr),
+        width, height, false);
   }
 
-  SECTION("Nullptr to source") {
-    REQUIRE(hipMemcpy2DFromArrayAsync(A_h, width, nullptr,
-                                      0, 0, width, NUM_H,
-                                      hipMemcpyDeviceToHost,
-                                      stream) != hipSuccess);
-  }
+  SECTION("Array to device") {
+    const auto width = GENERATE(16, 32, 48);
+    const auto height = GENERATE(16, 32, 48);
 
-  SECTION("Passing offset more than 0") {
-    REQUIRE(hipMemcpy2DFromArrayAsync(A_h, width, A_d, 1,
-                                      1, width, NUM_H,
-                                      hipMemcpyDeviceToHost,
-                                      stream) != hipSuccess);
+    MemcpyAtoDSyncBehavior(std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0,
+                                     width * sizeof(int), height, hipMemcpyDeviceToDevice, nullptr),
+                           width, height, false);
   }
-
-  SECTION("Passing array more than allocated") {
-    REQUIRE(hipMemcpy2DFromArrayAsync(A_h, width, A_d, 0,
-                                      0, width+2, NUM_H+2,
-                                      hipMemcpyDeviceToHost,
-                                      stream) != hipSuccess);
-  }
-
-  // Cleaning of Memory
-  HIP_CHECK(hipFreeArray(A_d));
-  HIP_CHECK(hipStreamDestroy(stream));
-  HipTest::freeArrays<float>(nullptr, nullptr, nullptr,
-                             A_h, hData, nullptr, false);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that nothing will be copied if width or height are set to zero.
+ *  - Following scenarios are considered:
+ *    -# When copying array to host
+ *      - Heigth is 0
+ *      - Width is 0
+ *    -# When copying from array to device
+ *      - Height is 0
+ *      - Width is 0
+ *  - Different streams are utilized
+ *    -# Default (null) stream
+ *    -# Per thread stream
+ *    -# Created (non-null) stream
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpy2DFromArrayAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_Positive_ZeroWidthHeight") {
+  using namespace std::placeholders;
+
+  const auto stream_type = GENERATE(Streams::nullstream, Streams::perThread, Streams::created);
+  const StreamGuard stream_guard(stream_type);
+  const hipStream_t stream = stream_guard.stream();
+
+  const auto width = 16;
+  const auto height = 16;
+
+  SECTION("Array to host") {
+    SECTION("Height is 0") {
+      Memcpy2DFromArrayZeroWidthHeight<true>(
+          std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0, width * sizeof(int), 0,
+                    hipMemcpyDeviceToHost, stream),
+          width, height, stream);
+    }
+    SECTION("Width is 0") {
+      Memcpy2DFromArrayZeroWidthHeight<true>(std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0,
+                                                       0, height, hipMemcpyDeviceToHost, stream),
+                                             width, height, stream);
+    }
+  }
+  SECTION("Array to device") {
+    SECTION("Height is 0") {
+      Memcpy2DFromArrayZeroWidthHeight<true>(
+          std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0, width * sizeof(int), 0,
+                    hipMemcpyDeviceToDevice, stream),
+          width, height, stream);
+    }
+    SECTION("Width is 0") {
+      Memcpy2DFromArrayZeroWidthHeight<true>(std::bind(hipMemcpy2DFromArrayAsync, _1, _2, _3, 0, 0,
+                                                       0, height, hipMemcpyDeviceToDevice, stream),
+                                             width, height, stream);
+    }
+  }
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When destination pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidHandle`
+ *    -# When source pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When source pitch is less than width
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidPitchValue`
+ *    -# When width/height increased by offset overflows
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When width/height overflows
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When memcpy direction is not valid
+ *      - Expected output: return `hipErrorInvalidMemcpyDirection`
+ *    -# When stream is not valid
+ *      - Expected output: return `hipErrorContextIsDestroyed`
+ *  - Following scenarios are repeated for:
+ *    -# Array to host
+ *    -# Array to device
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpy2DFromArrayAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemcpy2DFromArrayAsync_Negative_Parameters") {
+  using namespace std::placeholders;
+
+  const auto width = 32;
+  const auto height = 32;
+  const auto allocation_size = 2 * width * height * sizeof(int);
+
+  const unsigned int flag = hipArrayDefault;
+
+  constexpr auto InvalidStream = [] {
+    StreamGuard sg(Streams::created);
+    return sg.stream();
+  };
+
+  ArrayAllocGuard<int> array_alloc(make_hipExtent(width, height, 0), flag);
+  LinearAllocGuard2D<int> device_alloc(width, height);
+  LinearAllocGuard<int> host_alloc(LinearAllocs::hipHostMalloc, allocation_size);
+
+  SECTION("Array to host") {
+    SECTION("dst == nullptr") {
+      HIP_CHECK_ERROR(
+          hipMemcpy2DFromArrayAsync(nullptr, 2 * width * sizeof(int), array_alloc.ptr(), 0, 0,
+                                    width * sizeof(int), height, hipMemcpyDeviceToHost, nullptr),
+          hipErrorInvalidValue);
+    }
+    SECTION("src == nullptr") {
+      HIP_CHECK_ERROR(
+          hipMemcpy2DFromArrayAsync(host_alloc.ptr(), 2 * width * sizeof(int), nullptr, 0, 0,
+                                    width * sizeof(int), height, hipMemcpyDeviceToHost, nullptr),
+          hipErrorInvalidHandle);
+    }
+#if HT_NVIDIA  // EXSWHTEC-212
+    SECTION("dpitch < width") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(host_alloc.ptr(), width * sizeof(int) - 10,
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int),
+                                                height, hipMemcpyDeviceToHost, nullptr),
+                      hipErrorInvalidPitchValue);
+    }
+    SECTION("Offset + width/height overflows") {
+      HIP_CHECK_ERROR(
+          hipMemcpy2DFromArrayAsync(host_alloc.ptr(), 2 * width * sizeof(int), array_alloc.ptr(), 1,
+                                    0, width * sizeof(int), height, hipMemcpyDeviceToHost, nullptr),
+          hipErrorInvalidValue);
+      HIP_CHECK_ERROR(
+          hipMemcpy2DFromArrayAsync(host_alloc.ptr(), 2 * width * sizeof(int), array_alloc.ptr(), 0,
+                                    1, width * sizeof(int), height, hipMemcpyDeviceToHost, nullptr),
+          hipErrorInvalidValue);
+    }
+    SECTION("Width/height overflows") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(host_alloc.ptr(), 2 * width * sizeof(int),
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int) + 1,
+                                                height, hipMemcpyDeviceToHost, nullptr),
+                      hipErrorInvalidValue);
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(host_alloc.ptr(), 2 * width * sizeof(int),
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int),
+                                                height + 1, hipMemcpyDeviceToHost, nullptr),
+                      hipErrorInvalidValue);
+    }
+    SECTION("Memcpy kind is invalid") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(host_alloc.ptr(), 2 * width * sizeof(int),
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int),
+                                                height, static_cast<hipMemcpyKind>(-1), nullptr),
+                      hipErrorInvalidMemcpyDirection);
+    }
+    SECTION("Invalid stream") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(host_alloc.ptr(), 2 * width * sizeof(int),
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int),
+                                                height, hipMemcpyDeviceToHost, InvalidStream()),
+                      hipErrorContextIsDestroyed);
+    }
+#endif
+  }
+  SECTION("Array to device") {
+    SECTION("dst == nullptr") {
+      HIP_CHECK_ERROR(
+          hipMemcpy2DFromArrayAsync(nullptr, device_alloc.pitch(), array_alloc.ptr(), 0, 0,
+                                    width * sizeof(int), height, hipMemcpyDeviceToDevice, nullptr),
+          hipErrorInvalidValue);
+    }
+    SECTION("src == nullptr") {
+      HIP_CHECK_ERROR(
+          hipMemcpy2DFromArrayAsync(device_alloc.ptr(), device_alloc.pitch(), nullptr, 0, 0,
+                                    width * sizeof(int), height, hipMemcpyDeviceToDevice, nullptr),
+          hipErrorInvalidHandle);
+    }
+#if HT_NVIDIA  // EXSWHTEC-212
+    SECTION("dpitch < width") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(device_alloc.ptr(), width * sizeof(int) - 10,
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int),
+                                                height, hipMemcpyDeviceToDevice, nullptr),
+                      hipErrorInvalidPitchValue);
+    }
+    SECTION("Offset + width/height overflows") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(device_alloc.ptr(), device_alloc.pitch(),
+                                                array_alloc.ptr(), 1, 0, width * sizeof(int),
+                                                height, hipMemcpyDeviceToDevice, nullptr),
+                      hipErrorInvalidValue);
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(device_alloc.ptr(), device_alloc.pitch(),
+                                                array_alloc.ptr(), 0, 1, width * sizeof(int),
+                                                height, hipMemcpyDeviceToDevice, nullptr),
+                      hipErrorInvalidValue);
+    }
+    SECTION("Width/height overflows") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(device_alloc.ptr(), device_alloc.pitch(),
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int) + 1,
+                                                height, hipMemcpyDeviceToDevice, nullptr),
+                      hipErrorInvalidValue);
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(device_alloc.ptr(), device_alloc.pitch(),
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int),
+                                                height + 1, hipMemcpyDeviceToDevice, nullptr),
+                      hipErrorInvalidValue);
+    }
+    SECTION("Memcpy kind is invalid") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(device_alloc.ptr(), device_alloc.pitch(),
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int),
+                                                height, static_cast<hipMemcpyKind>(-1), nullptr),
+                      hipErrorInvalidMemcpyDirection);
+    }
+    SECTION("Invalid stream") {
+      HIP_CHECK_ERROR(hipMemcpy2DFromArrayAsync(device_alloc.ptr(), device_alloc.pitch(),
+                                                array_alloc.ptr(), 0, 0, width * sizeof(int),
+                                                height, hipMemcpyDeviceToDevice, InvalidStream()),
+                      hipErrorContextIsDestroyed);
+    }
+#endif
+  }
+}

@@ -16,35 +16,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-/*
-Added Negative and Functional tests for hipPointerGetAttribute API
-
-Functional Scenarios:
-
-1. Allocate memory using different Allocation APIs and check whether
-   correct memory type and device oridinal are returned.
-
-2. Allocate device variable and get the pointer info by calling hipPointerGetAttribute API
-   with HIP_POINTER_ATTRIBUTE_DEVICE_POINTER/HIP_POINTER_ATTRIBUTE_START_ADDRESS
-   and Launch kernel with device variable and verify whether the pointer variable of
-   hipPointerGetAttribute is getting updated or not
-
-3. Allocate device memory in GPU-0 and get the pointer info in peer GPU
-
-4. Allocate device memory and get the buffer ID by calling
-   hipPointerGetAttribute API with HIP_POINTER_ATTRIBUTE_BUFFER_ID,
-   DeAllocate and Allocate the memory again and ensure that the buffer ID is unique
-
-5. Allocate host memory and get the device ordinal by calling
-   hipPointerGetAttribute API with HIP_POINTER_ATTRIBUTE_DEVICE_ORDINAL
-   and ensure that it matches with CUDA result(which returns 100)
-
-6. Allocate managed memory with different flags and trigger
-   hipPointerGetAttribute with the following flags HIP_POINTER_ATTRIBUTE_MAPPED and verify the behaviour
-*/
 
 #include <hip_test_common.hh>
 #include <string>
+
+/**
+ * @addtogroup hipPointerGetAttribute hipPointerGetAttribute
+ * @{
+ * @ingroup MemoryTest
+ * `hipPointerGetAttribute(void* data, hipPointer_attribute attribute,
+ * hipDeviceptr_t ptr)` -
+ * Returns information about the specified pointer.[BETA]
+ */
+
 static constexpr auto NUM_W{16};
 static constexpr auto NUM_H{16};
 static constexpr size_t N {10};
@@ -56,8 +40,18 @@ static __global__ void var_update(int* data) {
   }
 }
 
-/* Allocate memory using different Allocation APIs and check whether
-   correct memory type and device oridinal are returned */
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocate memory using different Allocation APIs and check whether
+ *    correct memory type and device oridinal are returned.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipPointerGetAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipPointerGetAttribute_MemoryTypes") {
   HIP_CHECK(hipSetDevice(0));
   size_t pitch_A;
@@ -113,13 +107,18 @@ TEST_CASE("Unit_hipPointerGetAttribute_MemoryTypes") {
 #endif
 }
 
-/*
- * This testcase verifies the following scenario
- * Initializes A_d with A_h and get pointer info using hipPointerGetAttribute
- * The result of the API is passed to kernel for validation
- * and modifies it in kernel.
- * Validates the device variable to check whether the
- * data is updated or not.
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates device variable and gets the pointer attribute.
+ *  - Launches kernel with the device variable.
+ *  - Verifies that the pointer attribute variable is getting updated.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipPointerGetAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipPointerGetAttribute_KernelUpdation") {
   HIP_CHECK(hipSetDevice(0));
@@ -147,10 +146,19 @@ TEST_CASE("Unit_hipPointerGetAttribute_KernelUpdation") {
   HIP_CHECK(hipFree(A_d));
   free(A_h);
 }
-/*
- * This testcase verifies the pointer info of device variable
- * from peer GPU device.It validates the memory type and
- * device ordinal in peer GPU
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies the pointer info of device variable
+ *    from peer GPU device.
+ *  - Validates the memory type and device ordinal in peer GPU.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipPointerGetAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipPointerGetAttribute_PeerGPU") {
   HIP_CHECK(hipSetDevice(0));
@@ -187,10 +195,19 @@ TEST_CASE("Unit_hipPointerGetAttribute_PeerGPU") {
   HIP_CHECK(hipFree(A_d));
 }
 
-/* Allocate device memory and get the buffer ID by calling
-   hipPointerGetAttribute API with HIP_POINTER_ATTRIBUTE_BUFFER_ID,
-   DeAllocate and Allocate the memory again and
-   ensure that the buffer ID is unique */
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocate device memory and get the buffer ID.
+ *  - DeAllocate and Allocate the memory again and ensure
+ *    that the buffer ID is unique.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipPointerGetAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipPointerGetAttribute_BufferID") {
   HIP_CHECK(hipSetDevice(0));
   size_t Nbytes = 0;
@@ -209,11 +226,19 @@ TEST_CASE("Unit_hipPointerGetAttribute_BufferID") {
   REQUIRE(bufid1 != bufid2);
 }
 
-/* Allocate host memory and get the device ordinal by calling
-   hipPointerGetAttribute API with HIP_POINTER_ATTRIBUTE_DEVICE_ORDINAL
-   and ensure that it matches with CUDA result
-*/
 #if HT_AMD
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocate host memory and get the device ordinal.
+ *  - Ensure that it matches with CUDA result.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipPointerGetAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipPointerGetAttribute_HostDeviceOrdinal") {
   size_t Nbytes = 0;
   Nbytes = N * sizeof(int);
@@ -234,9 +259,19 @@ TEST_CASE("Unit_hipPointerGetAttribute_HostDeviceOrdinal") {
 }
 #endif
 
-/* Allocate managed memory with different flags and trigger
-   hipPointerGetAttribute with the following flags HIP_POINTER_ATTRIBUTE_MAPPED
-   and verify the behaviour */
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocate managed memory with different flags.
+ *  - Get attribute for the mapped attribute.
+ *  - Verify behaviour.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipPointerGetAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipPointerGetAttribute_MappedMem") {
   HIP_CHECK(hipSetDevice(0));
   size_t Nbytes = 0;
@@ -266,7 +301,34 @@ TEST_CASE("Unit_hipPointerGetAttribute_MappedMem") {
   free(A_h);
 }
 
-/* This testcase verifies negative scenarios of hipPointerGetAttribute API */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the attribute is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When address pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When required start address of host pointer
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When memory is deallocated before getting attribute
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When host pointer attribute is required from the device
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When buffer ID attribute is required from the host pointer
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When invalid attribute (-1) is passed
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When getting attributes not supported by the device
+ *      - Platform specific (AMD)
+ *      - Expected output: return `hipErrorNotSupported`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipPointerGetAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipPointerGetAttribute_Negative") {
   HIP_CHECK(hipSetDevice(0));
   size_t Nbytes = 0;
@@ -316,9 +378,8 @@ TEST_CASE("Unit_hipPointerGetAttribute_Negative") {
         == hipErrorInvalidValue);
   }
   SECTION("Pass invalid attribute") {
-    hipPointer_attribute attr{HIP_POINTER_ATTRIBUTE_DEVICE_POINTER};
-    REQUIRE(hipPointerGetAttribute(&data, attr,
-          reinterpret_cast<hipDeviceptr_t>(A_h)) == hipErrorInvalidValue);
+    REQUIRE(hipPointerGetAttribute(&data, static_cast<hipPointer_attribute>(-1),
+                                   reinterpret_cast<hipDeviceptr_t>(A_h)) == hipErrorInvalidValue);
   }
 #if HT_AMD
   SECTION("Pass HIP_POINTER_ATTRIBUTE_IS_GPU_DIRECT_RDMA_CAPABLE"

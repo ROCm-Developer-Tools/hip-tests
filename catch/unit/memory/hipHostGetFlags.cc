@@ -20,15 +20,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-This testcase verifies the basic scenario of hipHostGetFlags API
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
 #include <thread>
 #include <vector>
+
+/**
+ * @addtogroup hipHostGetFlags hipHostGetFlags
+ * @{
+ * @ingroup MemoryTest
+ * `hipHostGetFlags(unsigned int* flagsPtr, void* hostPtr)` -
+ *  Return flags associated with host pointer.
+ */
 
 std::vector<unsigned int> FlagPart1Vec{hipHostMallocDefault,
                                        hipHostMallocDefault | hipHostMallocPortable,
@@ -56,26 +60,6 @@ std::vector<unsigned int> FlagPart2Vec{0x0};
 
 static constexpr auto LEN{1024 * 1024};
 
-/*
-This testcase verifies hipHostGetFlags API basic scenario
-1. Allocates the memory using different flags
-2. Gets the flags of the respective variable using
-   hipHostGetFlags API
-3. Validates it with the initial flags used while allocating
-   memory
-*/
-
-/* Possible host flags
- * hipHostMallocDefault 0x0
- * hipHostMallocPortable 0x1
- * hipHostMallocMapped 0x2
- * hipHostMallocWriteCombined 0x4
- * NOT on Nvidia
- * hipHostMallocNumaUser  0x20000000
- * hipHostMallocCoherent  0x40000000
- * hipHostMallocNonCoherent  0x80000000
- */
-
 inline void checkFlags(unsigned int expected, unsigned int obtained) {
   // Account for cases where flags from FlagPart1Vec do not include hipHostMallocMapped,
   // on Nvidia devices it is added by default
@@ -85,6 +69,20 @@ inline void checkFlags(unsigned int expected, unsigned int obtained) {
   REQUIRE(expected == obtained);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that flags set when allocating memory are returned.
+ *  - Allocate memory, and get flags.
+ *  - Check that retreived flags are equal to the ones that are set.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostGetFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports mapping of host memory
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostGetFlags_flagCombos") {
 
   constexpr auto SIZE{LEN * sizeof(int)};
@@ -118,7 +116,22 @@ TEST_CASE("Unit_hipHostGetFlags_flagCombos") {
   }
 }
 
-// Test Allocation with flags and getting flags in another thread
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that flags set when allocating memory in a separate thread,
+ *    are returned.
+ *  - Launch thread that allocates memory.
+ *  - Join thread.
+ *  - Get flags and check that they are equal to the ones that were set.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostGetFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports mapping of host memory
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostGetFlags_DifferentThreads") {
   constexpr auto SIZE{LEN * sizeof(int)};
   int* A_h{nullptr};
@@ -151,7 +164,25 @@ TEST_CASE("Unit_hipHostGetFlags_DifferentThreads") {
   }
 }
 
-// Test behaviour of hipHostGetFlags with invalid args
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When the output flag pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When passing device pointer instead of a host pointer
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When passing device pointer instead of a host pointer,
+ *       using `hipHostGetDevicePointer`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostGetFlags.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports mapping of host memory
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostGetFlags_InvalidArgs") {
   constexpr auto SIZE{LEN * sizeof(int)};
   int* A_h{nullptr};

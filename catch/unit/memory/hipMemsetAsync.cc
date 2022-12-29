@@ -75,10 +75,25 @@ static void doMemsetTest(allocType mallocType, memType memset_type, MultiDData d
   if (streamType == CREATEDSTR) HIP_CHECK(hipStreamDestroy(stream));
 }
 
-/*
- * test 2 async hipMemset's on the same memory at different offsets
+/**
+ * @addtogroup hipMemsetD8Async hipMemsetD8Async
+ * @{
+ * @ingroup MemoryTest
  */
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when two asynchronous memset APIs are called
+ *    on the same memory at different offesets.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemsetASyncMulti") {
 #if HT_AMD
   HipTest::HIP_SKIP_TEST("EXSWCPHIPT-127");
@@ -97,8 +112,18 @@ TEST_CASE("Unit_hipMemsetASyncMulti") {
   doMemsetTest<char>(mallocType, mem_type, data1, data2);
 }
 
-/*
- * test 2 async hipMemsetD[8,16,32]'s on the same memory at different offsets
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when two asynchronous memset APIS are called on the same memory
+ *    at different offsets.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
  */
 TEMPLATE_TEST_CASE("Unit_hipMemsetDASyncMulti", "", int8_t, int16_t, uint32_t) {
 #if HT_AMD
@@ -125,8 +150,29 @@ TEMPLATE_TEST_CASE("Unit_hipMemsetDASyncMulti", "", int8_t, int16_t, uint32_t) {
   doMemsetTest<TestType>(mallocType, memset_type, data1, data2);
 }
 
-/*
- * test 2 async hipMemset2D's on the same memory at different offsets
+/**
+ * End doxygen group hipMemsetD8Async.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemset2DAsync hipMemset2DAsync
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when two asynchronous memset APIS are called on the same memory
+ *    at different offsets.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset2DASyncMulti") {
 #if HT_AMD
@@ -147,8 +193,30 @@ TEST_CASE("Unit_hipMemset2DASyncMulti") {
 
   doMemsetTest<char>(mallocType, memset_type, data1, data2);
 }
-/*
- * test 2 async hipMemset3D's on the same memory at different offsets
+
+/**
+ * End doxygen group hipMemset2DAsync.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemset3DAsync hipMemset3DAsync
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when two asynchronous memset APIS are called on the same memory
+ *    at different offsets.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3DASyncMulti") {
 #if HT_AMD

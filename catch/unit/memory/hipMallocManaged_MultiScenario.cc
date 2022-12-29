@@ -17,27 +17,22 @@
    THE SOFTWARE.
  */
 
-/*
-   This testcase verifies the hipMallocManaged API in the following scenarios
-   1. MultiChunkSingleDevice Scenario
-   2. MultiChunkMultiDevice Scenario
-   3. Negative Scenarios
-   4. OverSubscription scenario
-   5. Device context change
-   6. Multiple Pointers
- */
-
 #include "hipMallocManagedCommon.hh"
 #include <hip_test_kernels.hh>
 #include <hip_test_checkers.hh>
 #include <atomic>
+
+/**
+ * @addtogroup hipMallocManaged hipMallocManaged
+ * @{
+ * @ingroup MemoryMTest
+ */
 
 const size_t MAX_GPU{256};
 static size_t N{4 * 1024 * 1024};
 static unsigned blocksPerCU{6};
 static unsigned threadsPerBlock{256};
 #define INIT_VAL 123
-
 
 /*
  * Kernel function to perform addition operation.
@@ -72,6 +67,20 @@ void HostKernelDouble(float* Hmm, float* hPtr, size_t n) {
 
 /*
    This testcase verifies the concurrent access of hipMallocManaged Memory on host and device.
+ */
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies concurrent access of managed memory on host and device.
+ *  - Launches kernel and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged_MultiScenario.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMallocManaged_HostDeviceConcurrent") {
   auto managed = HmmAttrPrint();
@@ -109,6 +118,20 @@ TEST_CASE("Unit_hipMallocManaged_HostDeviceConcurrent") {
 // Equal parts of Hmm is accessed and
 // kernel is launched on acessed chunk of hmm memory
 // and checks if there are any inconsistencies or access issues
+/**
+ * Test Description
+ * ------------------------
+ *  - A large chunk of managed memory is allocated.
+ *  - Equal parts of memory are accessed and kernel is launched on chunks.
+ *  - Verifies that there are no inconsistencies or access issues.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged_MultiScenario.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_MultiChunkSingleDevice") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -161,6 +184,22 @@ TEST_CASE("Unit_hipMallocManaged_MultiChunkSingleDevice") {
 // Equal parts of Hmm is accessed on available gpus and
 // kernel is launched on acessed chunk of hmm memory
 // and checks if there are any inconsistencies or access issues
+/**
+ * Test Description
+ * ------------------------
+ *  - A large chunk of managed memory is allocated.
+ *  - Equal parts of managed memory is accessed on available GPUs.
+ *  - Kernel is launched on accessed chunk of managed memory.
+ *  - Verifies that there are no inconsistencies or access issues.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged_MultiScenario.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - Multi-device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_MultiChunkMultiDevice") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -218,6 +257,20 @@ TEST_CASE("Unit_hipMallocManaged_MultiChunkMultiDevice") {
 
 // The following tests oversubscription hipMallocManaged() api
 // Currently disabled.
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies oversubscription of the managed memory.
+ *    - Expected output: return `hipErrorOutOfMemory`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged_MultiScenario.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_OverSubscription") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -236,8 +289,37 @@ TEST_CASE("Unit_hipMallocManaged_OverSubscription") {
 #endif
 }
 
-// The following test does negative testing of hipMallocManaged() api
-// by passing invalid values and check if the behavior is as expected
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the device pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When allocation size is zero, with attach global flag
+ *      - Expected output (AMD): return `hipErrorInvalidValue`
+ *      - Expected output (NVIDIA): return `hipSuccess`
+ *    -# When outputp pointer to the device pointer is `nullptr`
+ *       with attach host flag
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When allocation size is zero with attach host flag
+ *      - Expected output (AMD): return `hipErrorInvalidValue`
+ *      - Expected output (NVIDIA): return `hipSuccess`
+ *    -# When output pointer to the device pointer is `nullptr`
+ *       with size and flags set to zero
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When flag is set to the large invalid value
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When flag is set zero
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When flag is set to the attach host and attach global, both
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged_MultiScenario.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_Negative") {
   void* A;
   size_t total = 0, free = 0;
@@ -295,9 +377,20 @@ TEST_CASE("Unit_hipMallocManaged_Negative") {
   }
 }
 
-// Allocate two pointers using hipMallocManaged(), initialize,
-// then launch kernel using these pointers directly and
-// later validate the content without using any Memcpy.
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocate two pointers to the managed memory.
+ *  - Launch kernel using pointers directly.
+ *  - Validate the content without using any memory copying.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged_MultiScenario.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMallocManaged_TwoPointers", "", int, float, double) {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -333,11 +426,22 @@ TEMPLATE_TEST_CASE("Unit_hipMallocManaged_TwoPointers", "", int, float, double) 
   }
 }
 
-// In the following test, a memory is created using hipMallocManaged() by
-// setting a device and verified if it is accessible when the context is set
-// to all other devices. This include verification and Device two Device
-// transfers and kernel launch o discover if there any access issues.
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Managed memory chunk is allocated for each device.
+ *  - Verifies that memory is accessible when the context is set to all
+ *    other devices.
+ *  - Launches kernel to discover if there are any access issues.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged_MultiScenario.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - Multi-device
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMallocManaged_DeviceContextChange", "", unsigned char, int, float,
                    double) {
   auto managed = HmmAttrPrint();

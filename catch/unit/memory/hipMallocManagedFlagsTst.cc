@@ -23,6 +23,12 @@ THE SOFTWARE.
 #include "hipMallocManagedCommon.hh"
 #include <atomic>
 
+/**
+ * @addtogroup hipMallocManaged hipMallocManaged
+ * @{
+ * @ingroup MemoryMTest
+ */
+
 // Kernel function
 __global__ void MallcMangdFlgTst(int n, float* x, float* y) {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -30,7 +36,22 @@ __global__ void MallcMangdFlgTst(int n, float* x, float* y) {
   for (int i = index; i < n; i += stride) y[i] = x[i] * x[i];
 }
 
-// The following section tests working of hipMallocManaged with flag parameters
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates managed memory with attach global flag.
+ *  - Allocates managed memory.
+ *  - Launches calculation kernel.
+ *  - Synchronizes calculation with stream.
+ *  - Verifies results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManagedFlagsTst.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_FlgParam") {
   
   auto managed = HmmAttrPrint();
@@ -118,8 +139,21 @@ TEST_CASE("Unit_hipMallocManaged_FlgParam") {
   REQUIRE(IfTestPassed);
 }
 
-// The following function tests Memory access allocated using hipMallocManaged
-// in multiple streams
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates managed memory while using multiple streams.
+ *  - Allocates managed memory.
+ *  - Launches calculation kernel.
+ *  - Synchronizes calculation with stream.
+ *  - Verifies results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManagedFlagsTst.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_AccessMultiStream") {
   
   auto managed = HmmAttrPrint();

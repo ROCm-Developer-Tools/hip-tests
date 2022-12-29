@@ -17,15 +17,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-hipMalloc3D API test scenarios
-1. Basic Functionality
-2. Negative Scenarios
-3. Allocating Small and big chunk data
-4. Multithreaded scenario
-*/
-
 #include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipMalloc3D hipMalloc3D
+ * @{
+ * @ingroup MemoryTest
+ * `hipMalloc3D(hipPitchedPtr* pitchedDevPtr, hipExtent extent)` -
+ * Allocate logical 1D, 2D or 3D memory objects on the device.
+ */
+
 static constexpr auto SMALL_SIZE{4};
 static constexpr auto CHUNK_LOOP{100};
 static constexpr auto BIG_SIZE{100};
@@ -64,31 +65,65 @@ static void Malloc3DThreadFunc(int gpu) {
   MemoryAlloc3DDiffSizes(gpu);
 }
 
-/*
- * This verifies the hipMalloc3D API by
- * assigning width,height and depth as 10
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that 3D memory can be successfully allocated.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMalloc3D_Basic") {
   size_t width = SMALL_SIZE * sizeof(char);
   size_t height{SMALL_SIZE}, depth{SMALL_SIZE};
   hipPitchedPtr devPitchedPtr;
   hipExtent extent = make_hipExtent(width, height, depth);
+  size_t tot, avail, ptot, pavail;
+  HIP_CHECK(hipMemGetInfo(&pavail, &ptot));
+
   REQUIRE(hipMalloc3D(&devPitchedPtr, extent) == hipSuccess);
+  HIPCHECK(hipFree(devPitchedPtr.ptr));
+
+  HIP_CHECK(hipMemGetInfo(&avail, &tot));
+
+  if (pavail != avail) {
+    WARN("Memory leak of hipMalloc3D API in multithreaded scenario");
+    REQUIRE(false);
+  }
 }
 
-/*
-This testcase verifies the hipMalloc3D API by allocating
-smaller and big chunk data.
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that 3D memory can be successfully allocated when multiple
+ *    arrays of small and big chunks of float data are allocated.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3D_SmallandBigChunks") {
   MemoryAlloc3DDiffSizes(0);
 }
 
-/*
-This testcase verifies the hipMalloc3D API in multithreaded
-scenario by launching threads in parallel on multiple GPUs
-and verifies the hipMalloc3D API with small and big chunks data
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that 3D memory can be successfully allocated when multiple
+ *    arrays of small and big chunks of float data are allocated.
+ *  - Executes allocation in multiple threads on separate devices.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3D_MultiThread") {
   std::vector<std::thread> threadlist;
   int devCnt = 0;

@@ -37,6 +37,12 @@ THE SOFTWARE.
 #endif
 #include <list>
 
+/**
+ * @addtogroup hipMallocManaged hipMallocManaged
+ * @{
+ * @ingroup MemoryMTest
+ */
+
 #define INIT_VAL 2.5
 #define NUM_ELMS 268435456  // 268435456 * 4 = 1GB
 #define ITERATIONS 10
@@ -139,6 +145,17 @@ static void DisplayHmmFlgs(int *Signal) {
   Signal[0] = 1;
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates OverSubscription feature which is part of host managed memory.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHmmOvrSubscriptionTst.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_HMM_OverSubscriptionTst") {
   int HmmEnabled = 0;
   // The following Shared Mem is to get Max GPU Mem

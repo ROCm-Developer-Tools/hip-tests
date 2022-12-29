@@ -87,6 +87,27 @@ static void HipGetSymbolSizeAddressTest(const void* symbol) {
   HipGetSymbolSizeAddressTest<type, kArraySize, type##_arr_address_validation_kernel>(             \
       SYMBOL(type##_arr));
 
+/**
+ * @addtogroup hipGetSymbolAddress hipGetSymbolAddress
+ * @{
+ * @ingroup MemoryTest
+ * `hipGetSymbolAddress(void** devPtr, const void* symbol)` -
+ * Gets device pointer associated with symbol on the device.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Compares a passed pointer to the address of the symbol itself.
+ *  - Utilizes kernels, and checks that symbol pointer is equal to the address that
+ *    the kernel sees.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipGetSymbolSizeAddress.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetSymbolSizeAddress_Positive_Basic") {
   SECTION("int") { HIP_GET_SYMBOL_SIZE_ADDRESS_TEST(int); }
   SECTION("float") { HIP_GET_SYMBOL_SIZE_ADDRESS_TEST(float); }
@@ -94,6 +115,22 @@ TEST_CASE("Unit_hipGetSymbolSizeAddress_Positive_Basic") {
   SECTION("double") { HIP_GET_SYMBOL_SIZE_ADDRESS_TEST(double); }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When pointer to the device associated symbol is `nullptr`
+ *      - Platfom specific (AMD)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the symbol name is `nullptr`
+ *      - Expected output: return `hipErrorInvalidSymbol`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipGetSymbolSizeAddress.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetSymbolAddress_Negative_Parameters") {
 // Causes a segfault in CUDA
 #if HT_AMD
@@ -108,6 +145,37 @@ TEST_CASE("Unit_hipGetSymbolAddress_Negative_Parameters") {
   }
 }
 
+/**
+ * End doxygen group hipGetSymbolAddress.
+ * @}
+ */
+
+/**
+ * @addtogroup hipGetSymbolSize hipGetSymbolSize
+ * @{
+ * @ingroup MemoryTest
+ * `hipGetSymbolSize(size_t* size, const void* symbol)` -
+ * Gets the size of the given symbol on the device.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipGetSymbolSizeAddress_Positive_Basic
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the size is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the symbol name is `nullptr`
+ *      - Expected output: return `hipErrorInvalidSymbol`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipGetSymbolSizeAddress.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipGetSymbolSize_Negative_Parameters") {
 // Causes a segfault in CUDA
 #if HT_AMD

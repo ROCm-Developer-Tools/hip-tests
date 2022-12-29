@@ -54,6 +54,38 @@ inline void testHipMemset3DApis(hipPitchedPtr& pitchedDevPtr, int value, const h
   HIP_CHECK_ERROR(hipMemset3DAsync(pitchedDevPtr, value, extent, nullStream), expectedReturn);
 }
 
+/**
+ * @addtogroup hipMemset hipMemset
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid pointers:
+ *    -# When destination pointer is not initialized
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When destination pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When host pointer is passed as destination pointer
+ *      - Expected output: return `hipErrorInvalidValue`
+ *  - Performs memset for following APIs:
+ *    -# @ref hipMemset
+ *    -# @ref hipMemsetAsync
+ *    -# @ref hipMemsetD32
+ *    -# @ref hipMemsetD32Async
+ *    -# @ref hipMemsetD16
+ *    -# @ref hipMemsetD16Async
+ *    -# @ref hipMemsetD8
+ *    -# @ref hipMemsetD8Async
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetNegative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemset_Negative_InvalidPtr") {
   void* dst;
 
@@ -69,7 +101,28 @@ TEST_CASE("Unit_hipMemset_Negative_InvalidPtr") {
   testHipMemsetApis(dst, memsetVal, width);
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies the case when trying to set the memory that is out of
+ *    bounds regarding size.
+ *  - Performs memset for following APIs:
+ *    -# @ref hipMemset
+ *    -# @ref hipMemsetAsync
+ *    -# @ref hipMemsetD32
+ *    -# @ref hipMemsetD32Async
+ *    -# @ref hipMemsetD16
+ *    -# @ref hipMemsetD16Async
+ *    -# @ref hipMemsetD8
+ *    -# @ref hipMemsetD8Async
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetNegative.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemset_Negative_OutOfBoundsSize") {
 
 #if !HT_AMD
@@ -82,6 +135,27 @@ TEST_CASE("Unit_hipMemset_Negative_OutOfBoundsSize") {
 #endif
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies the case when trying to set the memory that is out of
+ *    bounds regarding address.
+ *  - Performs memset for following APIs:
+ *    -# @ref hipMemset
+ *    -# @ref hipMemsetAsync
+ *    -# @ref hipMemsetD32
+ *    -# @ref hipMemsetD32Async
+ *    -# @ref hipMemsetD16
+ *    -# @ref hipMemsetD16Async
+ *    -# @ref hipMemsetD8
+ *    -# @ref hipMemsetD8Async
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetNegative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemset_Negative_OutOfBoundsPtr") {
   void* dst;
   HIP_CHECK(hipMalloc(&dst, width));
@@ -89,6 +163,11 @@ TEST_CASE("Unit_hipMemset_Negative_OutOfBoundsPtr") {
   testHipMemsetApis(outOfBoundsPtr, memsetVal, width);
   HIP_CHECK(hipFree(dst));
 }
+
+/**
+ * End doxygen group hipMemset.
+ * @}
+ */
 
 TEST_CASE("Unit_hipMemset2D_Negative_InvalidPtr") {
   void* dst;

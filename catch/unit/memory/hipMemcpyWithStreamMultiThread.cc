@@ -17,16 +17,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Different test for checking functionality of
- * hipError_t hipMemcpyWithStream(void* dst, const void* src, size_t sizeBytes,
- * hipMemcpyKind kind, hipStream_t stream);
- */
-
-
 #include <hip_test_common.hh>
 #include <hip_test_kernels.hh>
 #include <vector>
+
+/**
+ * @addtogroup hipMemcpyWithStream hipMemcpyWithStream
+ * @{
+ * @ingroup MemoryTest
+ */
 
 #define LEN 64
 #define SIZE LEN << 2
@@ -618,6 +617,19 @@ void HipMemcpyWithStreamMultiThreadtests::TestkindHtoH(bool &val_res) {
   HIPCHECK(hipStreamDestroy(stream));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates basic behaviour of the memcpy with stream when
+ *    executed from multiple threads.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpyWithStreamMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-thread device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpyWithStream_MultiThread") {
   const auto Threadcount{10};
   bool ret_val[Threadcount];

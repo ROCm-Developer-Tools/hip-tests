@@ -17,28 +17,31 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-This testcase verifies the Basic scenario
-1. H2D-KernelLaunch-D2H then D2D-KernelLaunch-D2H in peer GPU
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_kernels.hh>
 #include <hip_test_checkers.hh>
 
+/**
+ * @addtogroup hipMemcpyDtoDAsync hipMemcpyDtoDAsync
+ * @{
+ * @ingroup MemoryTest
+ */
+
 static constexpr auto NUM_ELM{1024};
 
-/*
-This testcase verifies hipMemcpyDtoDAsync API
-1.Initializes device variables
-2.Launches kernel and performs the sum of device variables
-3.Copies the result to host variable and validates the result.
-4.Sets the peer device
-5.D2D copy from GPU-0 to GPU-1
-6.Kernel Launch
-7.DtoH copy and validating the result
-*/
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates basic device to device asynchronous test case.
+ *  - Launches kernels and validates the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpyDtoDAsync.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports peer to peer access
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMemcpyDtoDAsync_Basic", "",
                    int, float, double) {
   size_t Nbytes = NUM_ELM * sizeof(TestType);

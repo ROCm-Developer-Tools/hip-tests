@@ -20,23 +20,35 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-This testfile verifies the basic scenario of hipMemPtrGetInfo API
-*/
 #include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipMemPtrGetInfo hipMemPtrGetInfo
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemPtrGetInfo(void* ptr, size_t* size)` -
+ * Query memory info.
+ * Return snapshot of free memory, and total allocatable memory on the device.
+ */
+
 struct MemInfo{
     float a;
     int b;
     void* c;
 };
 
-/*
-This testcase verifies the basic scenario of
-hipMemPtrGetInfo API
-1. Allocates specific size of memory for the variables
-2. Gets the allocated size of that variable using hipMemPtrGetInfo API
-3. Validates the initial size and allocated size
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates specific size of memory for the variables.
+ *  - Gets the allocates size and compares it to the initial size.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemPtrGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemPtrGetInfo_Basic") {
   int* iPtr;
   float* fPtr;

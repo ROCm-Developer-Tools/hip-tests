@@ -17,19 +17,18 @@
    THE SOFTWARE.
  */
 
-/* Test Case Description:
-   1) This testcase verifies the hipMallocManaged basic scenario - supported on
-     all devices
-   2) This testcase verifies the hipMallocManaged advanced scenario - supported
-     only on HMM enabled devices
-   3) This testcase verifies that hipMallocManaged returns an OutOfMemory error
-     for allocations much larger than the available memory - supported on all devices
-*/
-
 #include "hipMallocManagedCommon.hh"
 #include <hip_test_kernels.hh>
 #include <hip_test_checkers.hh>
 
+/**
+ * @addtogroup hipMallocManaged hipMallocManaged
+ * @{
+ * @ingroup MemoryMTest
+ * `hipMallocManaged(void** dev_ptr,
+ * size_t size, unsigned int flags __dparm(hipMemAttachGlobal))` -
+ * Allocates memory that will be automatically managed by HIP.
+ */
 
 // Kernel functions
 
@@ -57,6 +56,19 @@ static unsigned threadsPerBlock{256};
 /*
    This testcase verifies the hipMallocManaged basic scenario - supported on all devices
  */
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates managed memory on the device for several arrays.
+ *  - Verifies that the allocation is successfully performed.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_Basic") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -72,9 +84,20 @@ TEST_CASE("Unit_hipMallocManaged_Basic") {
   HIP_CHECK(hipMallocManaged(&C, numElements * sizeof(float)));
 }
 
-/*
-   This testcase verifies the hipMallocManaged advanced scenario - supported only on HMM enabled
-   devices
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates managed memory on the device for several arrays.
+ *  - Verifies that the allocation is successfully performed.
+ *  - Launches kernel and performs event synchronization.
+ *  - Validates the results from kernel calculation.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMallocManaged_Advanced") {
   auto managed = HmmAttrPrint();
@@ -141,9 +164,17 @@ TEST_CASE("Unit_hipMallocManaged_Advanced") {
   REQUIRE(maxError != 0.0f);
 }
 
-/*
-   This testcase verifies that hipMallocManaged returns an OutOfMemory error for allocations much
-   larger than the available memory - supported on all devices
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that allocation fails if the requested size is too large.
+ *    - Expected output: return `hipErrorOutOfMemory`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocManaged.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMallocManaged_Large") {
   auto managed = HmmAttrPrint();

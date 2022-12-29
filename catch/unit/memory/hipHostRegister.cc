@@ -20,16 +20,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-This testfile verifies the following scenarios of hipHostRegister API
-1. Referencing the hipHostRegister variable from kernel and performing
-   memset on that variable.This is verified for different datatypes.
-2. hipHostRegister and perform hipMemcpy on it.
-*/
-
+#include "hip/hip_runtime_api.h"
 #include <hip_test_common.hh>
 #include <hip_test_helper.hh>
-#include "hip/hip_runtime_api.h"
+#include <utils.hh>
+
+/**
+ * @addtogroup hipHostRegister hipHostRegister
+ * @{
+ * @ingroup MemoryTest
+ * `hipHostRegister(void* hostPtr, size_t sizeBytes, unsigned int flags)` -
+ * Register host memory so it can be accessed from the current device.
+ */
 
 #define OFFSET 128
 static constexpr auto LEN{1024 * 1024};
@@ -63,23 +65,30 @@ void doMemCopy(size_t numElements, int offset, T* A, T* Bh, T* Bd, bool internal
   HIP_CHECK(hipMemcpy(Bh, Bd, sizeBytes, hipMemcpyDeviceToHost));
 
   // Make sure the copy worked
-  for (size_t i = 0; i < numElements; i++) {
-    REQUIRE(Bh[i] == A[i]);
-  }
+  ArrayMismatch(A, Bh, numElements);
 
   if (internalRegister) {
     HIP_CHECK(hipHostUnregister(A));
   }
 }
 
-/*
-This testcase verifies the hipHostRegister API by
-1. Allocating the memory using malloc
-2. hipHostRegister that variable
-3. Getting the corresponding device pointer of the registered varible
-4. Launching kernel and access the device pointer variable
-5. performing hipMemset on the device pointer variable
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that registered memory can be used like host allocated
+ *    memory with a kernel.
+ *  - Allocates the memory with malloc.
+ *  - Registers that variable.
+ *  - Gets the corresponding device pointer of the registered variable.
+ *  - Launches kernel and access the device pointer variable.
+ *  - Performs memset on the variable.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostRegister.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipHostRegister_ReferenceFromKernelandhipMemset", "", int, float, double) {
   size_t sizeBytes{LEN * sizeof(TestType)};
   TestType *A, **Ad;
@@ -119,10 +128,17 @@ TEMPLATE_TEST_CASE("Unit_hipHostRegister_ReferenceFromKernelandhipMemset", "", i
   delete[] Ad;
 }
 
-/*
-This testcase verifies hipHostRegister API by
-performing memcpy on the hipHostRegistered variable.
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs memory copy on the registered variable.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostRegister.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipHostRegister_Memcpy", "", int, float, double) {
   // 1 refers to hipHostRegister
   // 0 refers to malloc
@@ -162,6 +178,19 @@ template <typename T> __global__ void fill_kernel(T* dataPtr, T value) {
   dataPtr[tid] = value;
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that register is successfully performed with various
+ *    valid and invalid flag combinations.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostRegister.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipHostRegister_Flags", "", int, float, double) {
   size_t sizeBytes = 1 * sizeof(TestType);
   TestType* hostPtr = reinterpret_cast<TestType*>(malloc(sizeBytes));
@@ -191,6 +220,25 @@ TEMPLATE_TEST_CASE("Unit_hipHostRegister_Flags", "", int, float, double) {
   free(hostPtr);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When pointer to host memory is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When size of the memory is zero
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When size of the memory is not valid
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When memory is freed before register
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostRegister.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipHostRegister_Negative", "", int, float, double) {
   TestType* hostPtr = nullptr;
 

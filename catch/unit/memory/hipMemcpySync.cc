@@ -177,6 +177,23 @@ static void runMemcpyTests(hipStream_t stream, bool async, allocType type, memTy
 
 #if HT_AMD /* Disabled because frequency based wait is timing out on nvidia platforms */
 
+/**
+ * @addtogroup hipMemcpy hipMemcpy
+ * @{
+ * @ingroup MemoryTest
+ */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates synchronization behaviour of the API.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpySync.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpySync") {
 #if HT_AMD  // To be removed when EXSWCPHIPT-127 is fixed
   HipTest::HIP_SKIP_TEST("EXSWCPHIPT-127 - Sync behaviour differs on AMD and Nvidia");
@@ -190,7 +207,28 @@ TEST_CASE("Unit_hipMemcpySync") {
 
   doMemTest<char>(runMemcpyTests, type, memcpy_type, data);  // Uses long running kernel
 }
+/**
+ * End doxygen group hipMemcpy.
+ * @}
+ */
 
+/**
+ * @addtogroup hipMemcpy2D hipMemcpy2D
+ * @{
+ * @ingroup MemoryTest
+ */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates synchronization behaviour of the API.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpySync.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpy2DSync") {
 #if HT_AMD
   HipTest::HIP_SKIP_TEST("EXSWCPHIPT-127 - Sync behaviour differs on AMD and Nvidia");
@@ -206,7 +244,28 @@ TEST_CASE("Unit_hipMemcpy2DSync") {
 
   doMemTest<char>(runMemcpyTests, mallocType, memcpy_type, data);
 }
+/**
+ * End doxygen group hipMemcpy2D.
+ * @}
+ */
 
+/**
+ * @addtogroup hipMemcpy3D hipMemcpy3D
+ * @{
+ * @ingroup MemoryTest
+ */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates synchronization behaviour of the API.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpySync.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpy3DSync") {
 #if HT_AMD
   HipTest::HIP_SKIP_TEST("EXSWCPHIPT-127 - Sync behaviour differs on AMD and Nvidia");

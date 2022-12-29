@@ -34,8 +34,11 @@ THE SOFTWARE.
 #endif
 
 /**
- * @brief Test hipMalloc3D, hipMallocPitch and hipMemAllocPitch with multiple input values.
- *        Checks that the memory has been allocated with the specified pitch and extent sizes.
+ * @addtogroup hipMallocPitch hipMallocPitch
+ * @{
+ * @ingroup MemoryTest
+ * `hipMallocPitch(void** ptr, size_t* pitch, size_t width, size_t height)` -
+ * Allocates at least width (in bytes) * height bytes of linear memory.
  */
 
 static void validateMemory(void* devPtr, hipExtent extent, size_t pitch) {
@@ -129,166 +132,6 @@ hipExtent generateExtent(AllocationApi api) {
   return extent;
 }
 
-
-TEST_CASE("Unit_hipMalloc3D_ValidatePitch") {
-  hipPitchedPtr hipPitchedPtr;
-  hipExtent validExtent{generateExtent(AllocationApi::hipMalloc3D)};
-
-  HIP_CHECK(hipMalloc3D(&hipPitchedPtr, validExtent));
-  validateMemory(hipPitchedPtr.ptr, validExtent, hipPitchedPtr.pitch);
-  HIP_CHECK(hipFree(hipPitchedPtr.ptr));
-}
-
-TEST_CASE("Unit_hipMemAllocPitch_ValidatePitch") {
-  size_t pitch = 0;
-  hipDeviceptr_t ptr;
-  hipExtent validExtent{generateExtent(AllocationApi::hipMemAllocPitch)};
-  unsigned int elementSizeBytes = GENERATE(4, 8, 16);
-
-  if (validExtent.width == 0 || validExtent.height == 0) {
-    return;
-  }
-  //hipMemAllocPitch is driver API hence explicit init is required on NVidia plaform.
-  #ifdef __HIP_PLATFORM_NVIDIA__
-    DriverContext ctx;
-  #endif
-  HIP_CHECK(
-      hipMemAllocPitch(&ptr, &pitch, validExtent.width, validExtent.height, elementSizeBytes));
-  validateMemory(reinterpret_cast<void*>(ptr), validExtent, pitch);
-  HIP_CHECK(hipFree(reinterpret_cast<void*>(ptr)));
-}
-
-TEST_CASE("Unit_hipMallocPitch_ValidatePitch") {
-  size_t pitch = 0;
-  void* ptr;
-  hipExtent validExtent{generateExtent(AllocationApi::hipMemAllocPitch)};
-  HIP_CHECK(hipMallocPitch(&ptr, &pitch, validExtent.width, validExtent.height));
-  validateMemory(ptr, validExtent, pitch);
-  HIP_CHECK(hipFree(ptr));
-}
-
-TEST_CASE("Unit_hipMalloc3D_Negative") {
-  SECTION("Invalid ptr") {
-    hipExtent validExtent{1, 1, 1};
-    HIP_CHECK_ERROR(hipMalloc3D(nullptr, validExtent), hipErrorInvalidValue);
-  }
-
-  hipPitchedPtr ptr;
-  constexpr size_t maxSizeT = std::numeric_limits<size_t>::max();
-
-#if HT_NVIDIA
-  //TODO-MATCH-ERRORCODE
-  SECTION("Max size_t width") {
-    hipExtent validExtent{maxSizeT, 1, 1};
-    HIP_CHECK_ERROR(hipMalloc3D(&ptr, validExtent), hipErrorInvalidValue);
-  }
-#endif
-
-  SECTION("Max size_t height") {
-    hipExtent validExtent{1, maxSizeT, 1};
-    HIP_CHECK_ERROR(hipMalloc3D(&ptr, validExtent), hipErrorOutOfMemory);
-  }
-
-  SECTION("Max size_t depth") {
-    hipExtent validExtent{1, 1, maxSizeT};
-    HIP_CHECK_ERROR(hipMalloc3D(&ptr, validExtent), hipErrorOutOfMemory);
-  }
-
-#if HT_NVIDIA
-  //TODO-MATCH-ERRORCODE
-  SECTION("Max size_t all dimensions") {
-    hipExtent validExtent{maxSizeT, maxSizeT, maxSizeT};
-    HIP_CHECK_ERROR(hipMalloc3D(&ptr, validExtent), hipErrorInvalidValue);
-  }
-#endif
-}
-
-TEST_CASE("Unit_hipMallocPitch_Negative") {
-  size_t pitch = 0;
-  void* ptr;
-  constexpr size_t maxSizeT = std::numeric_limits<size_t>::max();
-
-  SECTION("Invalid ptr") {
-    HIP_CHECK_ERROR(hipMallocPitch(nullptr, &pitch, 1, 1), hipErrorInvalidValue);
-  }
-
-  SECTION("Invalid pitch") {
-    HIP_CHECK_ERROR(hipMallocPitch(&ptr, nullptr, 1, 1), hipErrorInvalidValue);
-  }
-
-#if HT_NVIDIA
-  //TODO-MATCH-ERRORCODE
-  SECTION("Max size_t width") {
-    HIP_CHECK_ERROR(hipMallocPitch(&ptr, &pitch, maxSizeT, 1), hipErrorInvalidValue);
-  }
-#endif
-
-  SECTION("Max size_t height") {
-    HIP_CHECK_ERROR(hipMallocPitch(&ptr, &pitch, 1, maxSizeT), hipErrorOutOfMemory);
-  }
-}
-
-TEST_CASE("Unit_hipMemAllocPitch_Negative") {
-  size_t pitch = 0;
-  hipDeviceptr_t ptr{};
-  unsigned int validElementSizeBytes{4};
-  constexpr size_t maxSizeT = std::numeric_limits<size_t>::max();
-
-#if HT_NVIDIA
-  /* Device synchronize is used here to initialize the device.
-   * Nvidia does not implicitly do it for this Api. And hipInit(0) does not work either.
-   */
-  HIP_CHECK(hipDeviceSynchronize());
-
-  SECTION("Invalid elementSizeBytes") {
-    unsigned int invalidElementSizeBytes = GENERATE(0, 7, 12, 17);
-    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, 1, 1, invalidElementSizeBytes),
-                    hipErrorInvalidValue);
-  }
-
-  SECTION("Zero width") {
-    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, 0, 1, validElementSizeBytes),
-                    hipErrorInvalidValue);
-  }
-  SECTION("Zero height") {
-    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, 1, 0, validElementSizeBytes),
-                    hipErrorInvalidValue);
-  }
-#endif
-
-  SECTION("Invalid dptr") {
-    HIP_CHECK_ERROR(hipMemAllocPitch(nullptr, &pitch, 1, 1, validElementSizeBytes),
-                    hipErrorInvalidValue);
-  }
-
-  SECTION("Invalid pitch") {
-    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, nullptr, 1, 1, validElementSizeBytes),
-                    hipErrorInvalidValue);
-  }
-
-#if HT_NVIDIA
-  //TODO-MATCH-ERRORCODE
-  SECTION("Max size_t width") {
-    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, maxSizeT, 1, validElementSizeBytes),
-                    hipErrorInvalidValue);
-  }
-#endif
-
-  SECTION("Max size_t height") {
-    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, 1, maxSizeT, validElementSizeBytes),
-                    hipErrorOutOfMemory);
-  }
-}
-
-/*
-Test Scenarios of hipMallocPitch API
-1. Basic Functionality Scenario
-2. Allocate memory using hipMallocPitch API, Launch Kernel validate result.
-3. Allocate Memory in small chunks and large chunks and check for possible memory leaks
-4. Allocate Memory using hipMallocPitch API, Memcpy2D on the allocated variables.
-5. Multithreaded scenario
-*/
-
 static constexpr auto SMALLCHUNK_NUMW{4};
 static constexpr auto SMALLCHUNK_NUMH{4};
 static constexpr auto LARGECHUNK_NUMW{1025};
@@ -366,46 +209,115 @@ static void MemoryAllocDiffSizes(int gpu) {
 static void threadFunc(int gpu) {
   MemoryAllocDiffSizes<float>(gpu);
 }
-/*
- * This testcase verifies the negative scenarios of hipMallocPitch API
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that pitched memory is correctly allocated in conjunction with
+ *    `hipMemCpy3D` and `hipMemSet3D`.
+ *  - The test is run for a gamut of randomly generated extent values, as well
+ *    as various element sizes in bytes.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
-#if 0 //TODO: Review, fix and re-enable test
+TEST_CASE("Unit_hipMallocPitch_ValidatePitch") {
+  size_t pitch = 0;
+  void* ptr;
+  hipExtent validExtent{generateExtent(AllocationApi::hipMemAllocPitch)};
+  HIP_CHECK(hipMallocPitch(&ptr, &pitch, validExtent.width, validExtent.height));
+  validateMemory(ptr, validExtent, pitch);
+  HIP_CHECK(hipFree(ptr));
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When pointer to the allocated memory is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the pitch is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pitch width is maximum `size_t`
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pitch height is maximum `size_t`
+ *      - Expected output: return `hipErrorOutOfMemory`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocPitch_Negative") {
-  float* A_d;
-  size_t pitch_A = 0;
-  size_t width{NUM_W * sizeof(float)};
-#if HT_NVIDIA
-  SECTION("NullPtr to Pitched Ptr") {
-    REQUIRE(hipMallocPitch(nullptr,
-            &pitch_A, width, NUM_H) != hipSuccess);
+  size_t pitch = 0;
+  void* ptr;
+  constexpr size_t maxSizeT = std::numeric_limits<size_t>::max();
+
+  SECTION("Invalid ptr") {
+    HIP_CHECK_ERROR(hipMallocPitch(nullptr, &pitch, 1, 1), hipErrorInvalidValue);
   }
 
-  SECTION("nullptr to pitch") {
-    REQUIRE(hipMallocPitch(reinterpret_cast<void**>(&A_d),
-                           nullptr, width, NUM_H) != hipSuccess);
+  SECTION("Invalid pitch") {
+    HIP_CHECK_ERROR(hipMallocPitch(&ptr, nullptr, 1, 1), hipErrorInvalidValue);
+  }
+
+#if HT_NVIDIA
+  //TODO-MATCH-ERRORCODE
+  SECTION("Max size_t width") {
+    HIP_CHECK_ERROR(hipMallocPitch(&ptr, &pitch, maxSizeT, 1), hipErrorInvalidValue);
   }
 #endif
-  SECTION("Width 0 in hipMallocPitch") {
-    REQUIRE(hipMallocPitch(reinterpret_cast<void**>(&A_d),
-                           &pitch_A, 0, NUM_H) == hipSuccess);
-  }
 
-  SECTION("Height 0 in hipMallocPitch") {
-    REQUIRE(hipMallocPitch(reinterpret_cast<void**>(&A_d),
-                           &pitch_A, width, 0) == hipSuccess);
-  }
-
-  SECTION("Max int values") {
-    REQUIRE(hipMallocPitch(reinterpret_cast<void**>(&A_d),
-                           &pitch_A, std::numeric_limits<int>::max(),
-                           std::numeric_limits<int>::max()) != hipSuccess);
+  SECTION("Max size_t height") {
+    HIP_CHECK_ERROR(hipMallocPitch(&ptr, &pitch, 1, maxSizeT), hipErrorOutOfMemory);
   }
 }
-#endif
-/*
- * This testcase verifies the basic scenario of
- * hipMallocPitch API for different datatypes
- *
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when pitch dimensions are zero:
+ *    -# When pitch width is zero
+ *      - Expected output: return `hipSuccess` and output pointer is `nullptr`
+ *    -# When pitch height is zero
+ *      - Expected output: return `hipSuccess` and output pointer is `nullptr`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMallocPitch_Zero_Dims") {
+  void* ptr = nullptr;
+  size_t pitch = 0;
+
+  SECTION("width == 0") {
+    HIP_CHECK(hipMallocPitch(&ptr, &pitch, 0, 1));
+    REQUIRE(ptr == nullptr);
+  }
+
+  SECTION("height == 0") {
+    HIP_CHECK(hipMallocPitch(&ptr, &pitch, 1, 0));
+    REQUIRE(ptr == nullptr);
+  }
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that pitch can be allocated with falid arguments.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEMPLATE_TEST_CASE("Unit_hipMallocPitch_Basic",
     "[hipMallocPitch]", int, unsigned int, float) {
@@ -414,21 +326,40 @@ TEMPLATE_TEST_CASE("Unit_hipMallocPitch_Basic",
   size_t width{NUM_W * sizeof(TestType)};
   REQUIRE(hipMallocPitch(reinterpret_cast<void**>(&A_d),
           &pitch_A, width, NUM_H) == hipSuccess);
+  REQUIRE(width <= pitch_A);
   HIP_CHECK(hipFree(A_d));
 }
 
-/*
- * This testcase verifies hipMallocPitch API for small
- * and big chunks of data.
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that memory is correctly freed after performing many
+ *    allocations on diferent sizes.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEMPLATE_TEST_CASE("Unit_hipMallocPitch_SmallandBigChunks",
     "[hipMallocPitch]", int, unsigned int, float) {
   MemoryAllocDiffSizes<TestType>(0);
 }
 
-/*
- * This testcase verifies the memory allocated by hipMallocPitch API
- * by performing Memcpy2D on the allocated memory.
+/**
+ * Test Description
+ * ------------------------
+ *  - Perform a pitch allocation and perform memcpy 2D with all direction arguments:
+ *    -# Host -> Device
+ *    -# Device -> Device
+ *    -# Device -> Host
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEMPLATE_TEST_CASE("Unit_hipMallocPitch_Memcpy2D", ""
                    , int, float, double) {
@@ -474,14 +405,24 @@ TEMPLATE_TEST_CASE("Unit_hipMallocPitch_Memcpy2D", ""
                                 A_h, B_h, C_h, false);
 }
 
-
-
 /*
 This testcase verifies the hipMallocPitch API in multithreaded
 scenario by launching threads in parallel on multiple GPUs
 and verifies the hipMallocPitch API with small and big chunks data
 */
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Launches trheads in parallel on all available devices.
+ *  - Verifies that pitch can be allocated with small and big data chunks.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocPitch_MultiThread", "") {
   std::vector<std::thread> threadlist;
   int devCnt = 0;
@@ -505,12 +446,19 @@ TEST_CASE("Unit_hipMallocPitch_MultiThread", "") {
   }
 }
 
-/*
- * This testcase verifies hipMallocPitch API by
- *  1. Allocating Memory using hipMallocPitch API
- *  2. Launching the kernel and copying the data from the allocated kernel
- *     variable to another kernel variable.
- *  3. Validating the result
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates pitched memory.
+ *  - Launches the kernel and copies the data from allocated kernel variable
+ *    to another kernel variable.
+ *  - Validates the result.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEMPLATE_TEST_CASE("Unit_hipMallocPitch_KernelLaunch", ""
                    , int, float, double) {
@@ -554,3 +502,221 @@ TEMPLATE_TEST_CASE("Unit_hipMallocPitch_KernelLaunch", ""
                                 A_h, B_h, C_h, false);
 }
 
+/**
+ * End doxygen group hipMallocPitch.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemAllocPitch hipMemAllocPitch
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemAllocPitch(hipDeviceptr_t* dptr, size_t* pitch, size_t widthInBytes,
+ * size_t height, unsigned int elementSizeBytes)` -
+ * Allocates at least width (in bytes) * height bytes of linear memory.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that pitched memory is correctly allocated in
+ *    conjunction with `hipMemcpy3D` and `hipMemset3D`
+ *  - The test is run for a gamut of randomly generated extent values,
+ *    as well as various element sizes in bytes.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemAllocPitch_ValidatePitch") {
+  size_t pitch = 0;
+  hipDeviceptr_t ptr;
+  hipExtent validExtent{generateExtent(AllocationApi::hipMemAllocPitch)};
+  unsigned int elementSizeBytes = GENERATE(4, 8, 16);
+
+  if (validExtent.width == 0 || validExtent.height == 0) {
+    return;
+  }
+  //hipMemAllocPitch is driver API hence explicit init is required on NVidia plaform.
+  #ifdef __HIP_PLATFORM_NVIDIA__
+    DriverContext ctx;
+  #endif
+  HIP_CHECK(
+      hipMemAllocPitch(&ptr, &pitch, validExtent.width, validExtent.height, elementSizeBytes));
+  validateMemory(reinterpret_cast<void*>(ptr), validExtent, pitch);
+  HIP_CHECK(hipFree(reinterpret_cast<void*>(ptr)));
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When element size bytes are not valid
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When width is zero
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When height is zero
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When output pointer to the allocated memory is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the pitch is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When width is maximum `size_t`
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When height is maximum `size_t`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemAllocPitch_Negative") {
+  size_t pitch = 0;
+  hipDeviceptr_t ptr{};
+  unsigned int validElementSizeBytes{4};
+  constexpr size_t maxSizeT = std::numeric_limits<size_t>::max();
+
+#if HT_NVIDIA
+  /* Device synchronize is used here to initialize the device.
+   * Nvidia does not implicitly do it for this Api. And hipInit(0) does not work either.
+   */
+  HIP_CHECK(hipDeviceSynchronize());
+
+  SECTION("Invalid elementSizeBytes") {
+    unsigned int invalidElementSizeBytes = GENERATE(0, 7, 12, 17);
+    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, 1, 1, invalidElementSizeBytes),
+                    hipErrorInvalidValue);
+  }
+
+  SECTION("Zero width") {
+    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, 0, 1, validElementSizeBytes),
+                    hipErrorInvalidValue);
+  }
+  SECTION("Zero height") {
+    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, 1, 0, validElementSizeBytes),
+                    hipErrorInvalidValue);
+  }
+#endif
+
+  SECTION("Invalid dptr") {
+    HIP_CHECK_ERROR(hipMemAllocPitch(nullptr, &pitch, 1, 1, validElementSizeBytes),
+                    hipErrorInvalidValue);
+  }
+
+  SECTION("Invalid pitch") {
+    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, nullptr, 1, 1, validElementSizeBytes),
+                    hipErrorInvalidValue);
+  }
+
+#if HT_NVIDIA
+  //TODO-MATCH-ERRORCODE
+  SECTION("Max size_t width") {
+    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, maxSizeT, 1, validElementSizeBytes),
+                    hipErrorInvalidValue);
+  }
+#endif
+
+  SECTION("Max size_t height") {
+    HIP_CHECK_ERROR(hipMemAllocPitch(&ptr, &pitch, 1, maxSizeT, validElementSizeBytes),
+                    hipErrorOutOfMemory);
+  }
+}
+
+/**
+ * End doxygen group hipMemAllocPitch.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMalloc3D hipMalloc3D
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that pitched memory is correctly allocated.
+ *  - The test is run for various extent values and sizes.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMalloc3D_ValidatePitch") {
+  hipPitchedPtr hipPitchedPtr;
+  hipExtent validExtent{generateExtent(AllocationApi::hipMalloc3D)};
+
+  HIP_CHECK(hipMalloc3D(&hipPitchedPtr, validExtent));
+  validateMemory(hipPitchedPtr.ptr, validExtent, hipPitchedPtr.pitch);
+  HIP_CHECK(hipFree(hipPitchedPtr.ptr));
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output device pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When width is set to value higher than maximal texture width
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When height is set to value higher than maximal texture height
+ *      - Expected output: return `hipErrorOutOfMemory`
+ *    -# When depth is set to value higher than maximal texture height
+ *      - Expected output: return `hipErrorOutOfMemory`
+ *    -# When all dimensions are set to value higher than maximal texture value
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocPitch.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMalloc3D_Negative") {
+  SECTION("Invalid ptr") {
+    hipExtent validExtent{1, 1, 1};
+    HIP_CHECK_ERROR(hipMalloc3D(nullptr, validExtent), hipErrorInvalidValue);
+  }
+
+  hipPitchedPtr ptr;
+  constexpr size_t maxSizeT = std::numeric_limits<size_t>::max();
+
+#if HT_NVIDIA
+  //TODO-MATCH-ERRORCODE
+  SECTION("Max size_t width") {
+    hipExtent validExtent{maxSizeT, 1, 1};
+    HIP_CHECK_ERROR(hipMalloc3D(&ptr, validExtent), hipErrorInvalidValue);
+  }
+#endif
+
+  SECTION("Max size_t height") {
+    hipExtent validExtent{1, maxSizeT, 1};
+    HIP_CHECK_ERROR(hipMalloc3D(&ptr, validExtent), hipErrorOutOfMemory);
+  }
+
+  SECTION("Max size_t depth") {
+    hipExtent validExtent{1, 1, maxSizeT};
+    HIP_CHECK_ERROR(hipMalloc3D(&ptr, validExtent), hipErrorOutOfMemory);
+  }
+
+#if HT_NVIDIA
+  //TODO-MATCH-ERRORCODE
+  SECTION("Max size_t all dimensions") {
+    hipExtent validExtent{maxSizeT, maxSizeT, maxSizeT};
+    HIP_CHECK_ERROR(hipMalloc3D(&ptr, validExtent), hipErrorInvalidValue);
+  }
+#endif
+}

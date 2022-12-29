@@ -20,16 +20,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
- Functional test for Memset3D and Memset3DAsync
- */
-
-
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipMemset3D hipMemset3D
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemset3D(hipPitchedPtr pitchedDevPtr, int  value, hipExtent extent )` -
+ * Fills synchronously the memory area pointed to by pitchedDevPtr with the constant value.
+ */
 
 /**
- * Basic Functional test of hipMemset3D
+ * Test Description
+ * ------------------------
+ *  - Allocates 3D memory chunk.
+ *  - Sets memory to the unique value.
+ *  - Performs copy and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3D_BasicFunctional") {
   constexpr int memsetval = 0x22;
@@ -77,7 +89,36 @@ TEST_CASE("Unit_hipMemset3D_BasicFunctional") {
 }
 
 /**
- * Basic Functional test of hipMemset3DAsync
+ * End doxygen group hipMemset3D.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemset3DAsync hipMemset3DAsync
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemset3DAsync(hipPitchedPtr pitchedDevPtr, int  value,
+ * hipExtent extent ,hipStream_t stream __dparm(0))` -
+ * Fills asynchronously the memory area pointed to by pitchedDevPtr with the constant value.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemsetFunctional_ZeroValue_3D
+ *  - @ref Unit_hipMemsetFunctional_SmallSize_3D
+ *  - @ref Unit_hipMemsetFunctional_ZeroSize_3D
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_3D
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Sets 3D allocated pitch memory, asynchronously.
+ *  - Performs copy and compares the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3DAsync_BasicFunctional") {
   constexpr int memsetval = 0x22;

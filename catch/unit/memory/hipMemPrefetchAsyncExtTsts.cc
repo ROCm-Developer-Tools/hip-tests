@@ -17,23 +17,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/* Test Case Description:
-   1) Allocate managed memory --> prefetch to gpu 0
-   call hipMemAdvise() on the memory and apply the flags ReadMostly,
-   AccessedBy, and PreferredLocation for gpus other than gpu 0 and verify
-   the flags using hipMemGetAttribute()
-   2) Allocate managed memory --> set AccessedBy using
-    hipMemAdvise() to gpu1 prefetch the memory to gpu 0 and then query for
-    AccessedBy using hipMemGetAttribute() and validate if AccessedBy is still
-    set to gpu1. Similar tests are done with ReadMostly and PreferredLocation
-    flags
-   3) Negative testing with hipMemPrefetchAsync() api
-   4) In this test case I am trying to allocate HMM memory
-   which is not multiple of page Size, but still trying to launch kernel and
-   see if we are getting values as expected.
+#include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipMemPrefetchAsync hipMemPrefetchAsync
+ * @{
+ * @ingroup MemoryMTest
  */
 
-#include <hip_test_common.hh>
 // Kernel function
 
 __global__ void MemPrftchAsyncKernel1(int* Hmm, size_t N) {
@@ -68,10 +59,22 @@ static int HmmAttrPrint() {
   return managed;
 }
 
-/* Test Case Description: Allocate managed memory --> prefetch to gpu 0
-   call hipMemAdvise() on the memory and apply the flags ReadMostly,
-   AccessedBy, and PreferredLocation for gpus other than gpu 0 and verify
-   the flags using hipMemGetAttribute()*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that memory advise is applied after an async prefetch.
+ *  - Allocate managed memory and prefetch to the device 0.
+ *  - Apply different flags for the devices other than device 0.
+ *  - Verify the values of the flags.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemPrefetchAsyncExtTsts.cc
+ * Test requirements
+ * ------------------------
+ *  - Device 0 supports managed memory management
+ *  - Multi-device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemPrefetchAsyncAdviseFlgTst") {
     int NGpus = 0;
     HIP_CHECK(hipGetDeviceCount(&NGpus));
@@ -133,6 +136,19 @@ TEST_CASE("Unit_hipMemPrefetchAsyncAdviseFlgTst") {
     AccessedBy using hipMemGetAttribute() and validate if AccessedBy is still
     set to gpu1. Similar tests are done with ReadMostly and PreferredLocation
     flags */
+/**
+ * Test Description
+ * ------------------------
+ *  - Checks that the memory advise can be applied before an async prefetch.
+ *  - Allocates managed memory and sets flags on the cevice 1.
+ *  - Prefetches the memory to the device 0 and checks that the valid flag is set.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemPrefetchAsyncExtTsts.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemPrefetchAsyncAccsdByTst") {
   int NGpus = 0;
   HIP_CHECK(hipGetDeviceCount(&NGpus));
@@ -219,7 +235,25 @@ TEST_CASE("Unit_hipMemPrefetchAsyncAccsdByTst") {
   }
 }
 
-/*Test Case description: Negative testing with hipMemPrefetchAsync() api*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When prefetch pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When size in bytes to prefetch is not usual
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When the device ID is not valid
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When the stream is not valid
+ *      - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemPrefetchAsyncExtTsts.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemPrefetchAsyncNegativeTst") {
   int MangdMem = HmmAttrPrint();
   if (MangdMem == 1) {
@@ -321,6 +355,21 @@ TEST_CASE("Unit_hipMemPrefetchAsyncNegativeTst") {
 /* Test Case description: In this test case I am trying to allocate HMM memory
    which is not multiple of page Size, but still trying to launch kernel and
    see if we are getting values as expected.*/
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocate an amount of memory that is not a multiple of a page size (4KB).
+ *  - Prefetches memory.
+ *  - Launches kernel.
+ *  - Validates the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemPrefetchAsyncExtTsts.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemPrefetchAsync_NonPageSz") {
   int *Hmm = nullptr, NumElms = 4096*2, InitVal = 123;
   hipStream_t strm;

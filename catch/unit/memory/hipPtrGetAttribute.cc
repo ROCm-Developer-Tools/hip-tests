@@ -20,15 +20,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- Run through few sanity tests to verify different attributes of hipPointerGetAttribute
-*/
 #include <hip_test_common.hh>
 #include <vector>
 #include <iostream>
 #include <string>
 
-// Run few simple cases including  host pointer arithmetic:
+
+/**
+ * @addtogroup hipPointerGetAttribute hipPointerGetAttribute
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Runs few simple cases including host pointer arithmetic.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipPtrGetAttribute.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipPtrGetAttribute_Simple") {
   HIP_CHECK(hipSetDevice(0));
   size_t Nbytes = 0;

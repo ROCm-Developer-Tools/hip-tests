@@ -214,9 +214,26 @@ bool testhipMemsetD8AsyncWithMultiThread() {
   return obj.resultAfterAllIterations();
 }
 
+/**
+ * @addtogroup hipMemsetAsync hipMemsetAsync
+ * @{
+ * @ingroup MemoryTest
+ */
 
-/*
- * Test that validates functionality of hipmemsetAsync apis over multi threads
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the order of execution of device kernel and memset API over multiple threads:
+ *    -# When @ref hipMemsetAsync is called from multiple threads
+ *    -# When @ref hipMemsetD32Async is called from multiple threads
+ *    -# When @ref hipMemsetD16Async is called from multiple threads
+ *    -# When @ref hipMemsetD8Async is called from multiple threads
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetAsyncMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemsetAsync_QueueJobsMultithreaded") {
   bool ret;

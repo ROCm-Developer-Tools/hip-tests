@@ -19,11 +19,44 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
-__device__ int devSymbol[10];
-
-/* Test verifies hipMemcpy[From/To]Symbol[Async] API Negative scenarios.
+/**
+ * @addtogroup hipMemcpyToSymbol hipMemcpyToSymbol
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemcpyToSymbol(const void* symbol, const void* src, size_t sizeBytes,
+ * size_t offset __dparm(0), hipMemcpyKind kind __dparm(hipMemcpyHostToDevice))` -
+ * Copies data to the given symbol on the device.
  */
 
+__device__ int devSymbol[10];
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When source pointer is `nullptr`
+ *      - Expected output for @ref hipMemcpyToSymbol
+ *        and @ref hipMemcpyToSymbolAsync : return `hipErrorInvalidSymbol`
+ *      - Expected output for @ref hipMemcpyFromSymbol
+ *        and @ref hipMemcpyFromSymbolAsync : return `hipErrorInvalidValue`
+ *    -# When destination pointer is `nullptr`
+ *      - Expected output for @ref hipMemcpyToSymbol
+ *        and @ref hipMemcpyToSymbolAsync : return `hipErrorInvalidValue`
+ *      - Expected output for @ref hipMemcpyFromSymbol
+ *        and @ref hipMemcpyFromSymbolAsync : return `hipErrorInvalidSymbol`
+ *    -# When size is not valid
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When offset is not valid
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When direction is not valid (-1)
+ *      - Expected output: return `hipErrorInvalidMemcpyDirection`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpyFromSymbol.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpyFromToSymbol_Negative") {
   SECTION("Invalid Src Ptr") {
     int result{0};
@@ -104,12 +137,21 @@ TEST_CASE("Unit_hipMemcpyFromToSymbol_Negative") {
   }
 }
 
-/*
- * Test Verifies hipMemcpyToSymbol/hipMemcpyFromSymbol and Async Variants for simple use case 
- * For single valuea To and From Symbol
- * For Array Values To and From Symbol
- * For Array Values with offset To and From Symbol
- * For Sync and Async Variants*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that the valid symbol is returned after being set.
+ *  - Executes test cases for both synchronous and asynchronous API versions:
+ *    -# When symbol is singular value
+ *    -# When symbol is array value
+ *    -# When symbol is offset'ed value
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpyFromSymbol.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpyToFromSymbol_SyncAndAsync") {
   enum StreamTestType { NullStream = 0, StreamPerThread, CreatedStream, NoStream };
 
@@ -188,3 +230,59 @@ TEST_CASE("Unit_hipMemcpyToFromSymbol_SyncAndAsync") {
     }
   }
 }
+
+/**
+ * End doxygen group hipMemcpyToSymbol.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemcpyToSymbolAsync hipMemcpyToSymbolAsync
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemcpyToSymbolAsync(const void* symbol, const void* src, size_t sizeBytes,
+ * size_t offset, hipMemcpyKind kind, hipStream_t stream __dparm(0))` -
+ * Copies data to the given symbol on the device asynchronously.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemcpyFromToSymbol_Negative
+ *  - @ref Unit_hipMemcpyToFromSymbol_SyncAndAsync
+ */
+/**
+ * End doxygen group hipMemcpyToSymbolAsync.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemcpyFromSymbol hipMemcpyFromSymbol
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemcpyFromSymbol(void* dst, const void* symbol, size_t sizeBytes,
+ * size_t offset __dparm(0), hipMemcpyKind kind __dparm(hipMemcpyDeviceToHost))` -
+ * Copies data from the given symbol on the device.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemcpyFromToSymbol_Negative
+ *  - @ref Unit_hipMemcpyToFromSymbol_SyncAndAsync
+ */
+/**
+ * End doxygen group hipMemcpyFromSymbol.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemcpyFromSymbolAsync hipMemcpyFromSymbolAsync
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemcpyFromSymbolAsync(void* dst, const void* symbol, size_t sizeBytes,
+ * size_t offset, hipMemcpyKind kind, hipStream_t stream __dparm(0))` -
+ * Copies data from the given symbol on the device asynchronously.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemcpyFromToSymbol_Negative
+ *  - @ref Unit_hipMemcpyToFromSymbol_SyncAndAsync
+ */
+/**
+ * End doxygen group hipMemcpyFromSymbolAsync.
+ * @}
+ */

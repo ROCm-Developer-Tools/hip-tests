@@ -86,7 +86,7 @@ Testcase Scenarios :
 #define XPOS_END 19
 
 
-/**
+/*
  * Memset with extent passed and verify data to be intact
  */
 static void testMemsetWithExtent(bool bAsync, hipExtent tstExtent) {
@@ -165,7 +165,7 @@ static void testMemsetWithExtent(bool bAsync, hipExtent tstExtent) {
 }
 
 
-/**
+/*
  * Validates data after performing memory set operation with max memset value
  */
 static void testMemsetMaxValue(bool bAsync) {
@@ -225,7 +225,7 @@ static void testMemsetMaxValue(bool bAsync) {
   free(A_h);
 }
 
-/**
+/*
  * Function seeks device ptr to random slice and performs Memset operation
  * on the slice selected.
  */
@@ -314,7 +314,7 @@ static void seekAndSet3DArraySlice(bool bAsync) {
   HIP_CHECK(hipFree(devicePitchedPointer.ptr));
 }
 
-/**
+/*
  * Function seeks device ptr to selected portion of 3d array
  * and performs Memset operation on the portion.
  */
@@ -409,11 +409,27 @@ static void seekAndSet3DArrayPortion(bool bAsync) {
   HIP_CHECK(hipFree(devicePitchedPointer.ptr));
 }
 
-
+/**
+ * @addtogroup hipMemset3D hipMemset3D
+ * @{
+ * @ingroup MemoryTest
+ */
 
 /**
- * Test Memset3D with different combinations of extent
- * taking zero and non-zero fields.
+ * Test Description
+ * ------------------------
+ *  - Validates functionality with different combinations
+ *    of extent taking zero and non-zero fields:
+ *    -# Memset with extent width(0)
+ *    -# Memset with extend height(0)
+ *    -# Memset with extent depth(0)
+ *    -# Memset with extent width, height and depth as 0
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DFunctional.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3D_MemsetWithExtent") {
   hipExtent testExtent;
@@ -444,10 +460,79 @@ TEST_CASE("Unit_hipMemset3D_MemsetWithExtent") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies functionality of memset with maximum unsigned char value.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DFunctional.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemset3D_MemsetMaxValue") {
+  testMemsetMaxValue(0);
+}
 
 /**
- * Test Memset3DAsync with different combinations of extent
- * taking zero and non-zero fields.
+ * Test Description
+ * ------------------------
+ *  - Seeks and sets random slice of 3D array.
+ *  - Verifies the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DFunctional.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemset3D_SeekSetSlice") {
+  seekAndSet3DArraySlice(0);
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Sets the selected portion of a 3D array.
+ *  - Verifies the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DFunctional.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemset3D_SeekSetArrayPortion") {
+  seekAndSet3DArrayPortion(0);
+}
+
+/**
+ * End doxygen group hipMemset3D.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemset3DAsync hipMemset3DAsync
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates functionality with different combinations
+ *    of extent taking zero and non-zero fields:
+ *    -# Memset with extent width(0)
+ *    -# Memset with extend height(0)
+ *    -# Memset with extent depth(0)
+ *    -# Memset with extent width, height and depth as 0
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DFunctional.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3DAsync_MemsetWithExtent") {
   hipExtent testExtent;
@@ -479,42 +564,47 @@ TEST_CASE("Unit_hipMemset3DAsync_MemsetWithExtent") {
 }
 
 /**
- * Memset3D with max unsigned char and verify memset operation is success
- */
-TEST_CASE("Unit_hipMemset3D_MemsetMaxValue") {
-  testMemsetMaxValue(0);
-}
-
-/**
- * Memset3DAsync with max unsigned char and verify memset operation is success
+ * Test Description
+ * ------------------------
+ *  - Verifies functionality of asynchronous memset with maximum unsigned char value.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DFunctional.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3DAsync_MemsetMaxValue") {
   testMemsetMaxValue(1);
 }
 
 /**
- * Seek and set random slice of 3d array, verify memset is success
- */
-TEST_CASE("Unit_hipMemset3D_SeekSetSlice") {
-  seekAndSet3DArraySlice(0);
-}
-
-/**
- * Seek and set random slice of 3d array with async, verify memset is success
+ * Test Description
+ * ------------------------
+ *  - Seeks and asynchronously sets random slice of 3D array.
+ *  - Verifies the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DFunctional.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3DAsync_SeekSetSlice") {
   seekAndSet3DArraySlice(1);
 }
 
 /**
- * Memset3D selected portion of 3d array
- */
-TEST_CASE("Unit_hipMemset3D_SeekSetArrayPortion") {
-  seekAndSet3DArrayPortion(0);
-}
-
-/**
- * Memset3DAsync selected portion of 3d array
+ * Test Description
+ * ------------------------
+ *  - Asynchronously sets the selected portion of a 3D array.
+ *  - Verifies the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DFunctional.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3DAsync_SeekSetArrayPortion") {
   seekAndSet3DArrayPortion(1);

@@ -17,22 +17,36 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-
- 1) Test hipHostMalloc() api with ptr as nullptr and check for return value.
- 2) Test hipHostMalloc() api with size as max(size_t) and check for OOM error.
- 3) Test hipHostMalloc() api with flags as max(unsigned int) and validate
- return value.
- 4) Pass size as zero for hipHostMalloc() api and check ptr is reset with
- with return value success.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_helper.hh>
 
 /**
- * Performs argument validation of hipHostMalloc api.
+ * @addtogroup hipHostMalloc hipHostMalloc
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output pointer to the address pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When allocation size is `size_t` maximum
+ *      - Expected output: return `hipErrorMemoryAllocation`
+ *    -# When flags are `unsigned int` maximum
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When allocation size is zero
+ *      - Expected output: output pointer is `nullptr` and return `hipSuccess`
+ *    -# When coherent and noncoherent flags are passed together
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostMallocTests.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipHostMalloc_ArgValidation") {
 #if HT_NVIDIA

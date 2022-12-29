@@ -17,16 +17,15 @@
  * THE SOFTWARE.
  */
 
-/**
- Testcase Scenarios :
- 1) hipMemset2D api with basic functionality.
- 2) hipMemset2DAsync api with basic functionality.
- 3) hipMemset2D api with partial memset and unique width/height.
-*/
-
-
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipMemset2D hipMemset2D
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemset2D(void* dst, size_t pitch, int value, size_t width, size_t height)` -
+ * Fills the memory area pointed to by dst with the constant value.
+ */
 
 // Table with unique width/height and memset values.
 // (width2D, height2D, memsetWidth, memsetHeight)
@@ -42,10 +41,17 @@ static constexpr std::initializer_list<tupletype> tableItems {
                std::make_tuple(100, 100,  0,  0),
                };
 
-
-
 /**
- * Basic Functionality of hipMemset2D
+ * Test Description
+ * ------------------------
+ *  - Sets 2D allocated pitch memory.
+ *  - Performs copy and compares the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset2D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset2D_BasicFunctional") {
   constexpr int memsetval = 0x24;
@@ -82,52 +88,16 @@ TEST_CASE("Unit_hipMemset2D_BasicFunctional") {
   free(A_h);
 }
 
-
 /**
- * Basic Functionality of hipMemset2DAsync
- */
-TEST_CASE("Unit_hipMemset2DAsync_BasicFunctional") {
-  constexpr int memsetval = 0x26;
-  constexpr size_t numH = 256;
-  constexpr size_t numW = 256;
-  size_t pitch_A;
-  size_t width = numW * sizeof(char);
-  size_t sizeElements = width * numH;
-  size_t elements = numW * numH;
-  char *A_d, *A_h;
-
-  HIP_CHECK(hipMallocPitch(reinterpret_cast<void**>(&A_d), &pitch_A,
-                          width, numH));
-  A_h = reinterpret_cast<char*>(malloc(sizeElements));
-  REQUIRE(A_h != nullptr);
-
-  for (size_t i = 0; i < elements; i++) {
-      A_h[i] = 1;
-  }
-
-  hipStream_t stream;
-  HIP_CHECK(hipStreamCreate(&stream));
-  HIP_CHECK(hipMemset2DAsync(A_d, pitch_A, memsetval, numW, numH, stream));
-  HIP_CHECK(hipStreamSynchronize(stream));
-  HIP_CHECK(hipMemcpy2D(A_h, width, A_d, pitch_A, numW, numH,
-                       hipMemcpyDeviceToHost));
-
-  for (size_t i=0; i < elements; i++) {
-    if (A_h[i] != memsetval) {
-      INFO("Memset2DAsync mismatch at index:" << i << " computed:"
-                                     << A_h[i] << " memsetval:" << memsetval);
-      REQUIRE(false);
-    }
-  }
-
-  HIP_CHECK(hipFree(A_d));
-  HIP_CHECK(hipStreamDestroy(stream));
-  free(A_h);
-}
-
-
-/**
- * Memset partial buffer with unique Width and Height
+ * Test Description
+ * ------------------------
+ *  - Sets partial buffer with unique width and height.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset2D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset2D_UniqueWidthHeight") {
   int width2D, height2D;
@@ -173,3 +143,73 @@ TEST_CASE("Unit_hipMemset2D_UniqueWidthHeight") {
   free(A_h);
 }
 
+/**
+ * End doxygen group hipMemset2D.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemset2DAsync hipMemset2DAsync
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemset2DAsync(void* dst, size_t pitch, int value, size_t width,
+ * size_t height,hipStream_t stream __dparm(0))` -
+ * Fills asynchronously the memory area pointed to by dst with the constant value.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemsetFunctional_ZeroValue_2D
+ *  - @ref Unit_hipMemsetFunctional_SmallSize_2D
+ *  - @ref Unit_hipMemsetFunctional_ZeroSize_2D
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_2D
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Sets 2D allocated pitch memory, asynchronously.
+ *  - Performs copy and compares the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset2D.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemset2DAsync_BasicFunctional") {
+  constexpr int memsetval = 0x26;
+  constexpr size_t numH = 256;
+  constexpr size_t numW = 256;
+  size_t pitch_A;
+  size_t width = numW * sizeof(char);
+  size_t sizeElements = width * numH;
+  size_t elements = numW * numH;
+  char *A_d, *A_h;
+
+  HIP_CHECK(hipMallocPitch(reinterpret_cast<void**>(&A_d), &pitch_A,
+                          width, numH));
+  A_h = reinterpret_cast<char*>(malloc(sizeElements));
+  REQUIRE(A_h != nullptr);
+
+  for (size_t i = 0; i < elements; i++) {
+      A_h[i] = 1;
+  }
+
+  hipStream_t stream;
+  HIP_CHECK(hipStreamCreate(&stream));
+  HIP_CHECK(hipMemset2DAsync(A_d, pitch_A, memsetval, numW, numH, stream));
+  HIP_CHECK(hipStreamSynchronize(stream));
+  HIP_CHECK(hipMemcpy2D(A_h, width, A_d, pitch_A, numW, numH,
+                       hipMemcpyDeviceToHost));
+
+  for (size_t i=0; i < elements; i++) {
+    if (A_h[i] != memsetval) {
+      INFO("Memset2DAsync mismatch at index:" << i << " computed:"
+                                     << A_h[i] << " memsetval:" << memsetval);
+      REQUIRE(false);
+    }
+  }
+
+  HIP_CHECK(hipFree(A_d));
+  HIP_CHECK(hipStreamDestroy(stream));
+  free(A_h);
+}

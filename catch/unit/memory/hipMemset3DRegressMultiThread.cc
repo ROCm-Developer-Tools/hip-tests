@@ -17,20 +17,7 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
- 1) Validate Async behavior of hipMemset3DAsync with commands queued
- concurrently from multiple threads.
- 2) Validate hipMemset3DAsync behavior when api is queued along with kernel
- function operating on same memory.
- 3) Perform regression of hipMemset3D api in loop with device memory allocated
- on different gpus.
- 4) Perform regression of hipMemset3DAsync api in loop with device memory
- allocated on different gpus.
-*/
-
 #include <hip_test_common.hh>
-
 
 /*
  * Defines
@@ -38,7 +25,7 @@ Testcase Scenarios :
 #define MAX_REGRESS_ITERS 2
 #define MAX_THREADS 10
 
-/**
+/*
  * kernel function sets device memory with value passed
  */
 static __global__ void func_set_value(hipPitchedPtr devicePitchedPointer,
@@ -69,7 +56,7 @@ static __global__ void func_set_value(hipPitchedPtr devicePitchedPointer,
 }
 
 
-/**
+/*
  * Thread function queues kernel function and memset cmds
  */
 static void threadFunc(hipStream_t stream, hipPitchedPtr devpPtr,
@@ -89,8 +76,7 @@ static void threadFunc(hipStream_t stream, hipPitchedPtr devpPtr,
   HIPCHECK(hipMemcpy3DAsync(&myparms, stream));
 }
 
-
-/**
+/*
  * Performs api regression in loop
  */
 bool loopRegression(bool bAsync) {
@@ -184,8 +170,23 @@ bool loopRegression(bool bAsync) {
 }
 
 /**
- * Perform regression of hipMemset3D api with device memory allocated
- * on different gpus.
+ * @addtogroup hipMemset3D hipMemset3D
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs regression of 3D memset API with device memory allocated
+ *    on different devices.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DRegressMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3D_RegressInLoop") {
   bool TestPassed = false;
@@ -195,8 +196,27 @@ TEST_CASE("Unit_hipMemset3D_RegressInLoop") {
 }
 
 /**
- * Perform regression of hipMemset3DAsync api with device memory allocated
- * on different gpus.
+ * End doxygen group hipMemset3D.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemset3DAsync hipMemset3DAsync
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Performs regression of 3D asynchronous memset API with device
+ *    memory allocated on different devices.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DRegressMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3DAsync_RegressInLoop") {
   bool TestPassed = false;
@@ -206,7 +226,16 @@ TEST_CASE("Unit_hipMemset3DAsync_RegressInLoop") {
 }
 
 /**
- * Async commands queued concurrently and executed
+ * Test Description
+ * ------------------------
+ *  - Validates the scenarion when asynchronous commands are
+ *    queued concurrently and executed.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset3DRegressMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset3DAsync_ConcurrencyMthread") {
   char *A_h;

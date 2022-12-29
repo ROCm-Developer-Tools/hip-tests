@@ -21,10 +21,46 @@ THE SOFTWARE.
 */
 
 #include <hip_test_common.hh>
+#include <utils.hh>
 
+/**
+ * @addtogroup hipHostGetDevicePointer hipHostGetDevicePointer
+ * @{
+ * @ingroup MemoryTest
+ * `hipHostGetDevicePointer(void** devPtr, void* hstPtr, unsigned int flags)` -
+ * Get Device pointer from Host Pointer allocated through `hipHostMalloc`.
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When output device pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When host pointer is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When host pointer points to non-pinned memory
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When flags are not default (non-zero)
+ *      -Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostGetDevicePointer.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports mapping of host memory
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostGetDevicePointer_Negative") {
   int* hPtr{nullptr};
+  int* dPtr{nullptr};
   HIP_CHECK(hipHostMalloc(&hPtr, sizeof(int)));
+
+  if (!DeviceAttributesSupport(0, hipDeviceAttributeCanMapHostMemory)) {
+    HIP_CHECK_ERROR(hipHostGetDevicePointer(reinterpret_cast<void**>(&dPtr), hPtr, 0),
+                    hipErrorNotSupported);
+    return;
+  }
 
   SECTION("Nullptr as device") {
     HIP_CHECK_ERROR(hipHostGetDevicePointer(nullptr, hPtr, 0), hipErrorInvalidValue);
@@ -36,13 +72,48 @@ TEST_CASE("Unit_hipHostGetDevicePointer_Negative") {
                     hipErrorInvalidValue);
   }
 
-  // Not adding check for flags since CUDA spec states that there might be more values added to it
+  SECTION("Non pinned memory as host") {
+    int* hPtr = reinterpret_cast<int*>(malloc(sizeof(*hPtr)));
+    HIP_CHECK_ERROR(hipHostGetDevicePointer(reinterpret_cast<void**>(&dPtr), hPtr, 0),
+                    hipErrorInvalidValue);
+    free(hPtr);
+  }
+
+  SECTION("Flags non-zero") {
+    HIP_CHECK_ERROR(hipHostGetDevicePointer(reinterpret_cast<void**>(&dPtr), hPtr, 1),
+                    hipErrorInvalidValue);
+  }
+
   HIP_CHECK(hipHostFree(hPtr));
 }
 
 template <typename T> __global__ void set(T* ptr, T val) { *ptr = val; }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates basic use-case scenarios:
+ *    -# When set the value on device and get device pointer
+ *      - Check that host memory pointer has been updated accordingly
+ *        to device pointer
+ *      - Expected output: return `hipSuccess`
+ *    -# When set the value on device, using registered stack memory
+ *      - Check that value is equal within both pointers
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostGetDevicePointer.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports mapping of host memory
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostGetDevicePointer_UseCase") {
+  if(!DeviceAttributesSupport(0, hipDeviceAttributeCanMapHostMemory)) {
+    HipTest::HIP_SKIP_TEST("Device does not support mapping host memory"); 
+    return;
+  }
+
   int* hPtr{nullptr};
   HIP_CHECK(hipHostMalloc(&hPtr, sizeof(int)));
 
@@ -71,7 +142,7 @@ TEST_CASE("Unit_hipHostGetDevicePointer_UseCase") {
     HIP_CHECK(hipDeviceSynchronize());
     HIP_CHECK(hipHostUnregister(&res));
 
-    REQUIRE(value == 10);
+    REQUIRE(res == value);
   }
 
   HIP_CHECK(hipHostFree(hPtr));

@@ -22,6 +22,14 @@ THE SOFTWARE.
 
 #include <hip_test_common.hh>
 
+/**
+ * @addtogroup hipHostUnregister hipHostUnregister
+ * @{
+ * @ingroup MemoryTest
+ * `hipHostUnregister(void* hostPtr)` -
+ * Un-register host pointer.
+ */
+
 namespace hipHostUnregisterTests {
 constexpr unsigned int allFlags = hipHostRegisterDefault &  // 0
     hipHostRegisterPortable &                               // 1
@@ -44,7 +52,20 @@ inline bool hipHostRegisterSupported() {
 #endif
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Check that unregistering memory makes it an invalid argument
+ *    for getting the device pointer.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostUnregister.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports host register
+ *  - Platform specific (AMD)
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostUnregister_MemoryNotAccessableAfterUnregister") {
   if (!hipHostRegisterSupported()) {
     return;
@@ -64,15 +85,69 @@ TEST_CASE("Unit_hipHostUnregister_MemoryNotAccessableAfterUnregister") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of `nullptr` host pointer
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostUnregister.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostUnregister_NullPtr") {
   HIP_CHECK_ERROR(hipHostUnregister(nullptr), hipErrorInvalidValue);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when host pointer points to partial allocation
+ *    - Expected output: return `hipErrorHostMemoryNotRegistered`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostUnregister.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipHostUnregister_Ptr_Different_Than_Specified_To_Register") {
+  std::vector<int> alloc(2);
+  HIP_CHECK(hipHostRegister(alloc.data(), alloc.size(), 0));
+  HIP_CHECK_ERROR(hipHostUnregister(&alloc.data()[1]), hipErrorHostMemoryNotRegistered);
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when host pointer points to unregistered memory
+ *    - Expected output: return `hipErrorHostMemoryNotRegistered`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostUnregister.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostUnregister_NotRegisteredPointer") {
   auto x = std::unique_ptr<int>(new int);
   HIP_CHECK_ERROR(hipHostUnregister(x.get()), hipErrorHostMemoryNotRegistered);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of already unregistered pointer
+ *    - Expected output: return `hipErrorHostMemoryNotRegistered`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipHostUnregister.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipHostUnregister_AlreadyUnregisteredPointer") {
   if (!hipHostRegisterSupported()) {
     return;

@@ -17,36 +17,6 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
-Testcase Scenarios :
-
- 1) Test hipMalloc() api passing zero size and confirming *ptr returning
- nullptr. Also pass nullptr to hipFree() api.
-
- 2) Pass maximum value of size_t for hipMalloc() api and make sure appropriate
- error is returned.
-
- 3) Check for hipMalloc() error code, passing invalid/null pointer.
-
- 4) Regress hipMalloc()/hipFree() in loop for bigger chunk of allocation
- with adequate number of iterations and later test for kernel execution on
- default gpu.
-
- 5) Regress hipMalloc()/hipFree() in loop while allocating smaller chunks
- keeping maximum number of iterations and then run kernel code on default
- gpu, perfom data validation.
-
- 6) Check hipMalloc() api adaptability when app creates small chunks of memory
- continuously, stores it for later use and then frees it at later point
- of time.
-
- 7) Multithread Scenario : Exercise hipMalloc() api parellely on all gpus from
- multiple threads and regress the api.
-
- 8) Validate memory usage with hipMemGetInfo() while regressing hipMalloc()
- api. Check for any possible memory leaks.
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_kernels.hh>
@@ -55,6 +25,11 @@ Testcase Scenarios :
 #include <limits>
 #include <vector>
 
+/**
+ * @addtogroup hipMalloc hipMalloc
+ * @{
+ * @ingroup MemoryTest
+ */
 
 /* Buffer size for bigger chunks in alloc/free cycles */
 static constexpr auto BuffSizeBC = 5 * 1024 * 1024;
@@ -79,9 +54,7 @@ static constexpr auto MaxAllocPoolIter = (2000000 / NumDiv);
 static std::atomic<bool> g_thTestPassed{true};
 
 
-/**
- * Validates data consistency on supplied gpu
- */
+// Validates data consistency on supplied gpu
 static bool validateMemoryOnGPU(int gpu, bool concurOnOneGPU = false) {
   int *A_d, *B_d, *C_d;
   int *A_h, *B_h, *C_h;
@@ -136,9 +109,7 @@ static bool validateMemoryOnGPU(int gpu, bool concurOnOneGPU = false) {
 }
 
 
-/**
- * Regress memory allocation and free in loop
- */
+// Regress memory allocation and free in loop
 static bool regressAllocInLoop(int gpu) {
   bool TestPassed = true;
   size_t tot, avail, ptot, pavail, numBytes;
@@ -187,10 +158,7 @@ static bool regressAllocInLoop(int gpu) {
   return TestPassed;
 }
 
-/**
- * Validates data consistency on supplied gpu
- * In Multithreaded Environment
- */
+// Validates data consistency on supplied gpu in Multithreaded Environment
 static bool validateMemoryOnGpuMThread(int gpu, bool concurOnOneGPU = false) {
   int *A_d, *B_d, *C_d;
   int *A_h, *B_h, *C_h;
@@ -251,10 +219,7 @@ static bool validateMemoryOnGpuMThread(int gpu, bool concurOnOneGPU = false) {
   return TestPassed;
 }
 
-/**
- * Regress memory allocation and free in loop
- * In Multithreaded Environment
- */
+// Regress memory allocation and free in loop in Multithreaded Environment
 static bool regressAllocInLoopMthread(int gpu) {
   bool TestPassed = true;
   size_t tot, avail, ptot, pavail, numBytes;
@@ -303,17 +268,32 @@ static bool regressAllocInLoopMthread(int gpu) {
   return TestPassed;
 }
 
-/*
- * Thread func to regress alloc and check data consistency
- */
+// Thread func to regress alloc and check data consistency
 static void threadFunc(int gpu) {
   g_thTestPassed = regressAllocInLoopMthread(gpu) && validateMemoryOnGpuMThread(gpu, true);
 
   UNSCOPED_INFO("thread execution status on gpu" << gpu << ":" << g_thTestPassed.load());
 }
 
-
-/* Performs Argument Validation of api */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates arguments handling:
+ *    -# When allocation size is zero
+ *      - Expected output: address pointer is `nullptr`
+ *    -# When calling free on `nullptr`
+ *      - Expected output: return `hipSuccess`
+ *    -# When output pointer to the address is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When allocation size is max size of `size_t`
+ *      - Expecterd output: return `hipErrorMemoryAllocation` 
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocConcurrency.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc_ArgumentValidation") {
   int* ptr{nullptr};
 
@@ -341,6 +321,19 @@ TEST_CASE("Unit_hipMalloc_ArgumentValidation") {
  * Regress hipMalloc()/hipFree() in loop for bigger chunks and
  * smaller chunks of memory allocation
  */
+/**
+ * Test Description
+ * ------------------------
+ *  - Regress memory allocation and deallocation in loop for bigger
+ *    and smaller chunks of memory allocation.
+ *  - Execute kernels on the default device.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocConcurrency.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc_LoopRegressionAllocFreeCycles") {
   int devCnt = 0;
 
@@ -353,10 +346,16 @@ TEST_CASE("Unit_hipMalloc_LoopRegressionAllocFreeCycles") {
 }
 
 /**
- * Application Behavior Modelling.
- * Check hipMalloc() api adaptability when app creates small chunks of memory
- * continuously, stores it for later use and then frees it at later point
- * of time.
+ * Test Description
+ * ------------------------
+ *  - Regress memory allocation and deallocation in loop smaller chunks of memory allocation.
+ *  - Execute kernels on the default device.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocConcurrency.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMalloc_AllocateAndPoolBuffers") {
   size_t avail{0}, tot{0}, pavail{0}, ptot{0};
@@ -401,10 +400,18 @@ TEST_CASE("Unit_hipMalloc_AllocateAndPoolBuffers") {
   REQUIRE(ptot == tot);
 }
 
-
 /**
- * Exercise hipMalloc() api parellely on all gpus from
- * multiple threads and regress the api.
+ * Test Description
+ * ------------------------
+ *  - Allocate memory on all devices, paralelly from multiple threads.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocConcurrency.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-device
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMalloc_Multithreaded_MultiGPU") {
   std::vector<std::thread> threadlist;

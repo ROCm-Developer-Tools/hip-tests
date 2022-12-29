@@ -22,10 +22,13 @@ THE SOFTWARE.
 #include <hip_test_checkers.hh>
 #include <utility>
 #include <vector>
-/*
-This testfile verifies the following scenarios of all hipMemcpy API
-1. Multi thread
-*/
+
+/**
+ * @addtogroup hipMemcpy hipMemcpy
+ * @{
+ * @ingroup MemoryTest
+ */
+
 static constexpr auto NUM_ELM{1024};
 static constexpr auto NUM_THREADS{5};
 static auto Available_Gpus{0};
@@ -304,8 +307,26 @@ void Thread_func(bool &ret_val) {
   }
 }
 
-
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates behaviour of all memcpy APIs when multiple
+ *    threads are utilized:
+ *    -# @ref hipMemcpy
+ *    -# @ref hipMemcpyHtoD
+ *    -# @ref hipMemcpyDtoH
+ *    -# @ref hipMemcpyDtoD
+ *    -# @ref hipMemcpyAsync
+ *    -# @ref hipMemcpyHtoDAsync
+ *    -# @ref hipMemcypDtoHAsync
+ *    -# @ref hipMemcpyDtoDAsync
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpy_MultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpy_MultiThread-AllAPIs") {
   std::thread Thrd[NUM_THREADS];
   bool ret_val[NUM_THREADS];

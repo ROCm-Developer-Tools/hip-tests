@@ -22,18 +22,43 @@ THE SOFTWARE.
 #include <hip_test_checkers.hh>
 #include <utility>
 #include <vector>
-/*
-This testfile verifies the following scenarios of all hipMemcpy API
-1. Negative Scenarios
-2. Half Memory copy scenarios
-3. Null check scenario
-*/
+
+/**
+ * @addtogroup hipMemcpy hipMemcpy
+ * @{
+ * @ingroup MemoryTest
+ */
 
 static constexpr auto NUM_ELM{1024*1024};
 
-
-/*This testcase verifies the negative scenarios of hipMemcpy APIs
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies negative scenarios for all memcpy APIs:
+ *    -# When destination pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When source pointer is `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When both source and destination pointers are `nullptr`
+ *      - Expected output: do not return `hipSuccess`
+ *    -# When source and destination pointer is the same
+ *      - Expected output: return `hipSuccess`
+ *  - Following APIs are tested:
+ *    -# @ref hipMemcpy
+ *    -# @ref hipMemcpyHtoD
+ *    -# @ref hipMemcpyDtoH
+ *    -# @ref hipMemcpyDtoD
+ *    -# @ref hipMemcpyAsync
+ *    -# @ref hipMemcpyHtoDAsync
+ *    -# @ref hipMemcypDtoHAsync
+ *    -# @ref hipMemcpyDtoDAsync
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpyAllApiNegative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpy_Negative") {
   // Initialization of variables
   float *A_d{nullptr}, *B_d{nullptr}, *C_d{nullptr};
@@ -138,9 +163,25 @@ TEST_CASE("Unit_hipMemcpy_Negative") {
   HIP_CHECK(hipStreamDestroy(stream));
 }
 
-/*
-This testcase verifies the Nullcheck for all the 8 Memcpy APIs
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies the case when size is zero for following APIs:
+ *    -# @ref hipMemcpy
+ *    -# @ref hipMemcpyHtoD
+ *    -# @ref hipMemcpyDtoH
+ *    -# @ref hipMemcpyDtoD
+ *    -# @ref hipMemcpyAsync
+ *    -# @ref hipMemcpyHtoDAsync
+ *    -# @ref hipMemcypDtoHAsync
+ *    -# @ref hipMemcpyDtoDAsync
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpyAllApiNegative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpy_NullCheck") {
   // Initialization of variables
   float *A_d{nullptr}, *B_d{nullptr}, *C_d{nullptr};
@@ -227,10 +268,25 @@ TEST_CASE("Unit_hipMemcpy_NullCheck") {
   HIP_CHECK(hipStreamDestroy(stream));
 }
 
-/*
-This testcase verifies all the hipMemcpy APIs by
-copying half the memory.
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies the case when half of the memory is copied for following APIs:
+ *    -# @ref hipMemcpy
+ *    -# @ref hipMemcpyHtoD
+ *    -# @ref hipMemcpyDtoH
+ *    -# @ref hipMemcpyDtoD
+ *    -# @ref hipMemcpyAsync
+ *    -# @ref hipMemcpyHtoDAsync
+ *    -# @ref hipMemcypDtoHAsync
+ *    -# @ref hipMemcpyDtoDAsync
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemcpyAllApiNegative.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemcpy_HalfMemCopy") {
   // Initialization of variables
   float *A_d{nullptr}, *B_d{nullptr}, *C_d{nullptr};

@@ -17,21 +17,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-
 #include <hip_test_common.hh>
 #include <thread>
 #include <vector>
 
-/*
- * This testcase verifies hipMemGetInfo API
- * 1. Different memory chunk allocation
- *  1.1. hipMalloc - smallest memory chunck that can be allocated is 1024
- *  1.2. hipMallocArray
- *  1.3. hipMalloc3D
- *  1.3. hipMalloc3DArray
- * 2. Allocation using different threads
- * 3. Negative: Invalid args
- *
+/**
+ * @addtogroup hipMemGetInfo hipMemGetInfo
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemGetInfo(size_t* free, size_t* total)` -
+ * Query memory info.
+ * Return snapshot of free memory, and total allocatable memory on the device.
  */
 
 struct MinAlloc {
@@ -86,6 +82,18 @@ void fixAllocSize(size_t& allocation) {
                               << "Memory assumed to be used: \t\t" << usedMem);
 
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates different small chunks of memory.
+ *  - Retrieves info for each chunk and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_DifferentMallocSmall") {
   size_t freeMemInit;
   size_t totalMemInit;
@@ -128,6 +136,18 @@ TEST_CASE("Unit_hipMemGetInfo_DifferentMallocSmall") {
 #if 0  // FIXME_jatinx Disabled for now because the formula to calulcate memget info is incorrect
        // To be enabled after correct formula is found.
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates different large chunks of memory.
+ *  - Retrieves info for each chunk and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_DifferentMallocLarge") {
   size_t freeMemInit;
   size_t totalMemInit;
@@ -171,7 +191,18 @@ TEST_CASE("Unit_hipMemGetInfo_DifferentMallocLarge") {
   HIP_CHECK(hipFree(B_mem));
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates different multiple small chunks of memory.
+ *  - Retrieves info for each chunk and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_DifferentMallocMultiSmall") {
   size_t freeMemInit;
   size_t totalMemInit;
@@ -210,6 +241,18 @@ TEST_CASE("Unit_hipMemGetInfo_DifferentMallocMultiSmall") {
   HIP_CHECK(hipFree(B_mem));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates different chunks of memory that cannot be divided.
+ *  - Retrieves info for each chunk and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_DifferentMallocNotDiv") {
   size_t freeMemInit;
   size_t totalMemInit;
@@ -239,7 +282,18 @@ TEST_CASE("Unit_hipMemGetInfo_DifferentMallocNotDiv") {
   HIP_CHECK(hipFree(A_mem));
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates an array.
+ *  - Retrieves info for the array and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMemGetInfo_MallocArray", "", int, int4, char) {
   // get initial mem data
   size_t freeMemInit;
@@ -277,6 +331,18 @@ TEMPLATE_TEST_CASE("Unit_hipMemGetInfo_MallocArray", "", int, int4, char) {
   HIP_CHECK(hipFreeArray(arrayPtr));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates an 3D memory chunk.
+ *  - Retrieves info for the chunk and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_Malloc3D") {
   // Get initial memory
   size_t freeMemInit;
@@ -309,6 +375,18 @@ TEST_CASE("Unit_hipMemGetInfo_Malloc3D") {
   HIP_CHECK(hipFree(A_mem.ptr));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates an 3D array.
+ *  - Retrieves info for the array and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMemGetInfo_Malloc3DArray", "", char, int, int4) {
   // Get initial memory
   size_t freeMemInit;
@@ -383,7 +461,19 @@ TEMPLATE_TEST_CASE("Unit_hipMemGetInfo_Malloc3DArray", "", char, int, int4) {
   HIP_CHECK(hipFreeArray(arrayPtr));
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when info is retreived from multiple
+ *    threads for large memory chunks.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_ParaLarge") {
   size_t freeMemInit;
   size_t totalMemInit;
@@ -423,6 +513,19 @@ TEST_CASE("Unit_hipMemGetInfo_ParaLarge") {
 
 #endif
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when info is retreived from multiple
+ *    threads for small memory chunks.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_ParaSmall") {
   size_t freeMemInit;
   size_t totalMemInit;
@@ -467,6 +570,19 @@ TEST_CASE("Unit_hipMemGetInfo_ParaSmall") {
   HIP_CHECK(hipFree(A_mem));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when info is retreived from multiple
+ *    threads for memory chunks that cannot be divided.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_ParaNonDiv") {
   size_t freeMemInit;
   size_t totalMemInit;
@@ -498,6 +614,18 @@ TEST_CASE("Unit_hipMemGetInfo_ParaNonDiv") {
   HIP_CHECK(hipFree(A_mem));
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Allocates different multiple small chunks of memory.
+ *  - Retrieves info for each chunk from multiple threads and validates results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_ParaMultiSmall") {
   size_t freeMemInit;
   size_t totalMemInit;
@@ -533,7 +661,25 @@ TEST_CASE("Unit_hipMemGetInfo_ParaMultiSmall") {
   HIP_CHECK(hipFree(B_mem));
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When size is zero
+ *      - Expected output: return `hipSuccess`
+ *    -# When free is `nullptr`
+ *      - Expected output: return `hipSuccess`
+ *    -# When total memory is `nullptr`
+ *      - Expected output: return `hipSuccess`
+ *    -# When both arguments are `nullptr`
+ *      - Expected output: return `hipSuccess`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemGetInfo.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemGetInfo_Negative") {
   size_t freeMemInit;
   size_t totalMemInit;

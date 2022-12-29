@@ -167,10 +167,27 @@ static bool testhipMemsetD8AsyncWithKernel() {
   return obj.resultAfterAllIterations();
 }
 
+/**
+ * @addtogroup hipMemsetAsync hipMemsetAsync
+ * @{
+ * @ingroup MemoryTest
+ */
 
-/*
- * Test for checking order of execution of device kernel and
- * hipMemsetAsync apis on all gpus
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the order of execution of device kernel and memset API on all devices:
+ *    -# When @ref hipMemsetAsync is called with kernel
+ *    -# When @ref hipMemsetAsync is called with kernel using per thread stream
+ *    -# When @ref hipMemsetD32Async is called with kernel
+ *    -# When @ref hipMemsetD16Async is called with kernel
+ *    -# When @ref hipMemsetD8Async is called with kernel
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemsetAsyncAndKernel.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemsetAsync_VerifyExecutionWithKernel") {
   int numDevices = 0;

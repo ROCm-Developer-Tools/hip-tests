@@ -17,17 +17,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-hipMalloc3DArray API test scenarios
-1. Basic Functionality
-2. Negative Scenarios
-3. Allocating Small and big chunk data
-4. Multithreaded scenario
-*/
-
 #include <array>
 #include <hip_test_common.hh>
 #include "hipArrayCommon.hh"
+
+/**
+ * @addtogroup hipMalloc3DArray hipMalloc3DArray
+ * @{
+ * @ingroup MemoryTest
+ * `hipMalloc3DArray(hipArray** array, const struct hipChannelFormatDesc* desc,
+ * struct hipExtent extent, unsigned int flags)` -
+ * Allocate an array on the device.
+ */
 
 static constexpr auto ARRAY_SIZE{4};
 static constexpr auto BIG_ARRAY_SIZE{100};
@@ -71,16 +72,36 @@ static void Malloc3DArray_DiffSizes(int gpu) {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when multiple arrays of small and
+ *    big chunks of float data are allocated.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_DiffSizes") {
   Malloc3DArray_DiffSizes(0);
   HIP_CHECK_THREAD_FINALIZE();
 }
 
-/*
-This testcase verifies the hipMalloc3DArray API in multithreaded
-scenario by launching threads in parallel on multiple GPUs
-and verifies the hipMalloc3DArray API with small and big chunks data
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when multiple arrays of small and
+ *    big chunks of float data are allocated.
+ *  - Executes in multiple threads on separate devices.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_MultiThread") {
   std::vector<std::thread> threadlist;
   int devCnt = 0;
@@ -132,6 +153,18 @@ void checkArrayIsExpected(hipArray_t array, const hipChannelFormatDesc& expected
 }
 }  // namespace
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that 3D array can be allocated successfully
+ *    for different types of data and supported flags.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMalloc3DArray_happy", "", char, uchar2, uint2, int4, short4, float,
                    float2, float4) {
   hipArray_t array;
@@ -161,6 +194,19 @@ TEMPLATE_TEST_CASE("Unit_hipMalloc3DArray_happy", "", char, uchar2, uint2, int4,
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that 3D array allocation is working correctly for different
+ *    types of data when its width/height/depth are set to maximal size.
+ *  - Maximal size corresponds to maximal texture width/height/depth.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMalloc3DArray_MaxTexture", "", int, uint4, short, ushort2,
                    unsigned char, float, float4) {
   hipArray_t array;
@@ -250,8 +296,18 @@ hipExtent makeExtent(unsigned int flag, size_t s) {
   return make_hipExtent(s, s, s);
 }
 
-
-// Providing the array pointer as nullptr should return an error
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when array is `nullptr`
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_NullArrayPtr") {
   hipChannelFormatDesc desc = hipCreateChannelDesc<float4>();
   constexpr size_t s = 6;
@@ -261,7 +317,18 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_NullArrayPtr") {
                   hipErrorInvalidValue);
 }
 
-// Providing the description pointer as nullptr should return an error
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when descriptor pointer is `nullptr`
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_NullDescPtr") {
   constexpr size_t s = 6;  // 6 to keep cubemap happy
   hipArray_t array;
@@ -272,7 +339,18 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_NullDescPtr") {
                   hipErrorInvalidValue);
 }
 
-// Zero width arrays are not allowed
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when width is zero
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_ZeroWidth") {
   constexpr size_t s = 6;  // 6 to keep cubemap happy
   hipArray_t array;
@@ -284,7 +362,18 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_ZeroWidth") {
                   hipErrorInvalidValue);
 }
 
-// Zero height arrays are only allowed for 1D arrays and layered arrays
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when height is zero
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_ZeroHeight") {
   constexpr size_t s = 6;  // 6 to keep cubemap happy
   hipArray_t array;
@@ -301,6 +390,18 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_ZeroHeight") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when flag values in descriptor are not valid
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_InvalidFlags") {
   constexpr size_t s = 6;  // 6 to keep cubemap happy
   hipArray_t array;
@@ -336,12 +437,37 @@ void testInvalidDescription(hipChannelFormatDesc desc) {
   HIP_CHECK_ERROR(hipMalloc3DArray(&array, &desc, makeExtent(flag, s), flag), expectedError);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel format in descriptor is not valid
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_InvalidFormat") {
   hipChannelFormatDesc desc = hipCreateChannelDesc<float4>();
   desc.f = GENERATE(hipChannelFormatKindNone, 0xBEEF);
   testInvalidDescription(desc);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when there is a channel after a zero
+ *    channel is set as parameter
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_BadChannelLayout") {
   const int bits = GENERATE(8, 16, 32);
   const hipChannelFormatKind formatKind =
@@ -363,6 +489,18 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_BadChannelLayout") {
   testInvalidDescription(desc);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when descriptor is set to 8-bit float channels
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_8BitFloat") {
   hipChannelFormatDesc desc = GENERATE(hipCreateChannelDesc(8, 0, 0, 0, hipChannelFormatKindFloat),
                                        hipCreateChannelDesc(8, 8, 0, 0, hipChannelFormatKindFloat),
@@ -371,6 +509,18 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_8BitFloat") {
   testInvalidDescription(desc);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel sizes are different
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_DifferentChannelSizes") {
   const int bitsX = GENERATE(8, 16, 32);
   const int bitsY = GENERATE(8, 16, 32);
@@ -394,6 +544,18 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_DifferentChannelSizes") {
   testInvalidDescription(desc);
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel sizes in descriptor are invalid
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_BadChannelSize") {
   const int badBits = GENERATE(-1, 0, 10, 100);
   const hipChannelFormatKind formatKind =
@@ -405,8 +567,19 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_BadChannelSize") {
   testInvalidDescription(desc);
 }
 
-
-// hipMalloc3DArray should handle the max numeric value gracefully.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handle when width/height size are equal to maximum possible 
+ *    numerical value
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMalloc3DArray_Negative_NumericLimit") {
   hipArray_t arrayPtr;
   hipChannelFormatDesc desc = hipCreateChannelDesc<float>();
@@ -417,7 +590,18 @@ TEST_CASE("Unit_hipMalloc3DArray_Negative_NumericLimit") {
                   hipErrorInvalidValue);
 }
 
-// texture gather arrays are only allowed to be 2D
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when descriptor for array with flag set to texture gather
+ *    is set to represent 1D or 3D array for various types, which is not valid.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMalloc3DArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMalloc3DArray_Negative_Non2DTextureGather", "", char, uchar2, short4,
                    float2, float4) {
 #if HT_AMD

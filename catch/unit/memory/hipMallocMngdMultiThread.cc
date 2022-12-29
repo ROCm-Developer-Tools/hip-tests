@@ -23,6 +23,11 @@ THE SOFTWARE.
 #include "hipMallocManagedCommon.hh"
 #include <atomic>
 
+/**
+ * @addtogroup hipMallocManaged hipMallocManaged
+ * @{
+ * @ingroup MemoryMTest
+ */
 
 // Kernel functions
 __global__ void HmmMultiThread(int n, float* x, float* y) {
@@ -284,6 +289,19 @@ static void AllocateHmmMemory(int flag, int device) {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates behaviour of allocating managed memory from multiple threads.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocMngdMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_MultiThread") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -336,8 +354,20 @@ TEST_CASE("Unit_hipMallocManaged_MultiThread") {
   REQUIRE(IfTestPassed);
 }
 
-// The following test checks what happens when same Hmm memory is used to
-// launch multiple threads over multiple gpus
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when same host managed memory is used to launch
+ *    multiple threads over multiple devices.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocMngdMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - Multi-device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_MGpuMThread") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -380,6 +410,19 @@ TEST_CASE("Unit_hipMallocManaged_MGpuMThread") {
 
 // The following test checks what happens when multiple kernels are launched
 // with same Hmm memory
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when multiple kernels are launched with
+ *    the same host managed memory.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocMngdMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_MultiKrnlComnHmm") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -414,6 +457,19 @@ TEST_CASE("Unit_hipMallocManaged_MultiKrnlComnHmm") {
 
 // The following test checks what happens when multiple kernels are launched
 // with same hipMalloc() memory
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when multiple kernels are launched with the same
+ *    pageable memory.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocMngdMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_MultiKrnlComnMalloc") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -445,6 +501,20 @@ TEST_CASE("Unit_hipMallocManaged_MultiKrnlComnMalloc") {
 
 //  The following section tests the scenario wherein multiple threads use their
 //  own stream to launch kernel on common Hmm memory
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when multiple treads use their own stream to launch kernel
+ *    on common host memory management.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocMngdMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_MultiThrdMultiStrm") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {
@@ -474,9 +544,20 @@ TEST_CASE("Unit_hipMallocManaged_MultiThrdMultiStrm") {
   }
 }
 
-
-//  The following section tests the scenario wherein two threads each use
-//  different kernel but common HMM memory
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when two threads each use different kernel but common
+ *    host managed memory.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocMngdMultiThread.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports managed memory management
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocManaged_TwoKrnlsComnHmmMem") {
   auto managed = HmmAttrPrint();
   if (managed != 1) {

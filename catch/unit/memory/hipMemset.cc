@@ -17,19 +17,7 @@
  * THE SOFTWARE.
  */
 
-/**
-Testcase Scenarios :
- 1) Test hipMemset small size buffers with unique memset values.
- 2) Test hipMemset, hipMemsetD8, hipMemsetD16, hipMemsetD32 apis with unique
-    number of elements and memset values.
- 3) Test hipMemsetAsync, hipMemsetD8Async, hipMemsetD16Async, hipMemsetD32Async
-    apis with unique number of elements and memset values.
- 4) Test two memset async operations at the same time.
-*/
-
-
 #include <hip_test_common.hh>
-
 
 // Table with unique number of elements and memset values.
 // (N, memsetval, memsetD32val, memsetD16val, memsetD8val)
@@ -140,10 +128,31 @@ static bool testhipMemsetAsync(T *A_h, T *A_d, T memsetval,
   return testResult;
 }
 
+/**
+ * @addtogroup hipMemset hipMemset
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemset(void* dst, int value, size_t sizeBytes)` -
+ * Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
+ * byte value value.
+ */
 
 /**
- * Test hipMemset, hipMemsetD8, hipMemsetD16, hipMemsetD32 apis with unique
- * number of elements and memset values.
+ * Test Description
+ * ------------------------
+ *  - Uses offsets to set desired value to memory range.
+ *  - Validates that the memory is set as expected.
+ *  - Performs memset for following APIs:
+ *    -# @ref hipMemset
+ *    -# @ref hipMemsetD32
+ *    -# @ref hipMemsetD16
+ *    -# @ref hipMemsetD8
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset_SetMemoryWithOffset") {
   char memsetval;
@@ -182,10 +191,141 @@ TEST_CASE("Unit_hipMemset_SetMemoryWithOffset") {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Tests setting unique values to small buffers.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipMemset_SmallBufferSizes") {
+  char *A_d, *A_h;
+  constexpr int memsetval = 0x24;
+
+  auto numElements = GENERATE(range(1, 4));
+  int numBytes = numElements * sizeof(char);
+
+  HIP_CHECK(hipMalloc(&A_d, numBytes));
+  A_h = reinterpret_cast<char*> (malloc(numBytes));
+
+  HIP_CHECK(hipMemset(A_d, memsetval, numBytes));
+  HIP_CHECK(hipMemcpy(A_h, A_d, numBytes, hipMemcpyDeviceToHost));
+
+  for (int i = 0; i < numBytes; i++) {
+    if (A_h[i] != memsetval) {
+      INFO("Mismatch at index:" << i << " computed:" << A_h[i]
+                                          << " memsetval:" << memsetval);
+      REQUIRE(false);
+    }
+  }
+
+  HIP_CHECK(hipFree(A_d));
+  free(A_h);
+}
 
 /**
- * Test hipMemsetAsync, hipMemsetD8Async, hipMemsetD16Async, hipMemsetD32Async
- * apis with unique number of elements and memset values.
+ * End doxygen group hipMemset.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemsetD8 hipMemsetD8
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemsetD8(hipDeviceptr_t dest, unsigned char value, size_t count)` -
+ * Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
+ * byte value value.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemset_SetMemoryWithOffset
+ *  - @ref Unit_hipMemset_Negative_InvalidPtr
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsSize
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsPtr
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_1D
+ */
+/**
+ * End doxygen group hipMemsetD8.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemsetD16 hipMemsetD16
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemsetD16(hipDeviceptr_t dest, unsigned short value, size_t count)` -
+ * Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
+ * short value value.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemset_SetMemoryWithOffset
+ *  - @ref Unit_hipMemset_Negative_InvalidPtr
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsSize
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsPtr
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_1D
+ */
+/**
+ * End doxygen group hipMemsetD16.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemsetD32 hipMemsetD32
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemsetD32(hipDeviceptr_t dest, int value, size_t count)` -
+ * Fills the memory area pointed to by dest with the constant integer
+ * value for specified number of times.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemset_SetMemoryWithOffset
+ *  - @ref Unit_hipMemset_Negative_InvalidPtr
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsSize
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsPtr
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_1D
+ */
+/**
+ * End doxygen group hipMemsetD32.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemsetAsync hipMemsetAsync
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemsetAsync(void* dst, int value, size_t sizeBytes, hipStream_t stream __dparm(0))` -
+ * Fills the first sizeBytes bytes of the memory area pointed to by dev with the constant
+ * byte value value.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemset_Negative_InvalidPtr
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsSize
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsPtr
+ *  - @ref Unit_hipMemsetFunctional_ZeroValue_hipMemset
+ *  - @ref Unit_hipMemsetFunctional_SmallSize_hipMemset
+ *  - @ref Unit_hipMemsetFunctional_ZeroSize_hipMemset
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_1D
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Uses offsets to set desired value to memory range.
+ *  - Validates that the memory is set as expected.
+ *  - Performs memset for following APIs:
+ *    -# @ref hipMemsetAsync
+ *    -# @ref hipMemsetD32Async
+ *    -# @ref hipMemsetD16Async
+ *    -# @ref hipMemsetD8Async
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemsetAsync_SetMemoryWithOffset") {
   char memsetval;
@@ -225,36 +365,18 @@ TEST_CASE("Unit_hipMemsetAsync_SetMemoryWithOffset") {
 }
 
 /**
- * Test hipMemset small size buffers with unique memset values.
- */
-TEST_CASE("Unit_hipMemset_SmallBufferSizes") {
-  char *A_d, *A_h;
-  constexpr int memsetval = 0x24;
-
-  auto numElements = GENERATE(range(1, 4));
-  int numBytes = numElements * sizeof(char);
-
-  HIP_CHECK(hipMalloc(&A_d, numBytes));
-  A_h = reinterpret_cast<char*> (malloc(numBytes));
-
-  HIP_CHECK(hipMemset(A_d, memsetval, numBytes));
-  HIP_CHECK(hipMemcpy(A_h, A_d, numBytes, hipMemcpyDeviceToHost));
-
-  for (int i = 0; i < numBytes; i++) {
-    if (A_h[i] != memsetval) {
-      INFO("Mismatch at index:" << i << " computed:" << A_h[i]
-                                          << " memsetval:" << memsetval);
-      REQUIRE(false);
-    }
-  }
-
-  HIP_CHECK(hipFree(A_d));
-  free(A_h);
-}
-
-
-/**
- * Test two memset async operations at the same time.
+ * Test Description
+ * ------------------------
+ *  - Test running two memset asynchronous operations
+ *    in parallel.
+ *  - Perform synchronization.
+ *  - Validate the results.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset_2AsyncOperations") {
   std::vector<float> v;
@@ -279,3 +401,90 @@ TEST_CASE("Unit_hipMemset_2AsyncOperations") {
   REQUIRE(v[0] == 0);
   REQUIRE(v[1024] == 1.75f);
 }
+
+/**
+ * End doxygen group hipMemsetAsync.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemsetD8Async hipMemsetD8Async
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemsetD8Async(hipDeviceptr_t dest, unsigned char value,
+ * size_t count, hipStream_t stream __dparm(0))` -
+ * Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
+ * byte value value.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemsetAsync_SetMemoryWithOffset
+ *  - @ref Unit_hipMemset_2AsyncOperations
+ *  - @ref Unit_hipMemset_Negative_InvalidPtr
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsSize
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsPtr
+ *  - @ref Unit_hipMemsetAsync_VerifyExecutionWithKernel
+ *  - @ref Unit_hipMemsetAsync_QueueJobsMultithreaded
+ *  - @ref Unit_hipMemsetFunctional_ZeroValue_hipMemsetD8
+ *  - @ref Unit_hipMemsetFunctional_SmallSize_hipMemsetD8
+ *  - @ref Unit_hipMemsetFunctional_ZeroSize_hipMemsetD8
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_1D
+ */
+/**
+ * End doxygen group hipMemsetD8Async.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemsetD16Async hipMemsetD16Async
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemsetD16Async(hipDeviceptr_t dest, unsigned short value,
+ * size_t count, hipStream_t stream __dparm(0))` -
+ * Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
+ * short value value.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipMemsetAsync_SetMemoryWithOffset
+ *  - @ref Unit_hipMemset_2AsyncOperations
+ *  - @ref Unit_hipMemset_Negative_InvalidPtr
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsSize
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsPtr
+ *  - @ref Unit_hipMemsetDASyncMulti
+ *  - @ref Unit_hipMemsetAsync_VerifyExecutionWithKernel
+ *  - @ref Unit_hipMemsetAsync_QueueJobsMultithreaded
+ *  - @ref Unit_hipMemsetFunctional_ZeroValue_hipMemsetD16
+ *  - @ref Unit_hipMemsetFunctional_SmallSize_hipMemsetD16
+ *  - @ref Unit_hipMemsetFunctional_ZeroSize_hipMemsetD16
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_1D
+ */
+/**
+ * End doxygen group hipMemsetD16Async.
+ * @}
+ */
+
+/**
+ * @addtogroup hipMemsetD32Async hipMemsetD32Async
+ * @{
+ * @ingroup MemoryTest
+ * `hipMemsetD32Async(hipDeviceptr_t dst, int value, size_t count,
+ * hipStream_t stream __dparm(0))` -
+ * Fills the memory area pointed to by dev with the constant integer
+ * value for specified number of times.
+ * ________________________
+ *  - @ref Unit_hipMemsetAsync_SetMemoryWithOffset
+ *  - @ref Unit_hipMemset_2AsyncOperations
+ *  - @ref Unit_hipMemset_Negative_InvalidPtr
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsSize
+ *  - @ref Unit_hipMemset_Negative_OutOfBoundsPtr
+ *  - @ref Unit_hipMemsetDASyncMulti
+ *  - @ref Unit_hipMemsetAsync_VerifyExecutionWithKernel
+ *  - @ref Unit_hipMemsetAsync_QueueJobsMultithreaded
+ *  - @ref Unit_hipMemsetFunctional_ZeroValue_hipMemsetD32
+ *  - @ref Unit_hipMemsetFunctional_SmallSize_hipMemsetD32
+ *  - @ref Unit_hipMemsetFunctional_ZeroSize_hipMemsetD32
+ *  - @ref Unit_hipMemsetFunctional_PartialSet_1D
+ */
+/**
+ * End doxygen group hipMemsetD32Async.
+ * @}
+ */

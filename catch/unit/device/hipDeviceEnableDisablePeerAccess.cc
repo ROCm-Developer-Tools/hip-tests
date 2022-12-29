@@ -23,16 +23,29 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <hip_test_helper.hh>
 
-/*
-  Positive tests:
-    - for each peer change and check other peer access
+/**
+ * @addtogroup hipDeviceEnablePeerAccess hipDeviceEnablePeerAccess
+ * @{
+ * @ingroup PeerToPeerTest
+ * `hipDeviceEnablePeerAccess(int peerDeviceId, unsigned int flags)` -
+ * Enable direct access from current device's virtual address space to memory allocations
+ * physically located on a peer device.
+ */
 
-  Negative tests:
-    - peerDeviceId is invalid
-    - flag value is invalid
-    - peer access is enabled/disabled twice
-    - peer access is disabled before being enabled
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Successfully enable peer access between each pair of devices.
+ *  - Successfully disable peer access between each pair of devices.
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceEnableDisablePeerAccess.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports peer to peer access
+ *  - Multi-device
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceEnableDisablePeerAccess_positive") {
   int canAccessPeer = 0;
   int deviceCount = HipTest::getGeviceCount();
@@ -56,7 +69,23 @@ TEST_CASE("Unit_hipDeviceEnableDisablePeerAccess_positive") {
   }
 }
 
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When peer device ID is not valid, -1 or out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When flag is not valid (-1)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When peer access has already been enabled
+ *      - Expected output: return `hipErrorPeerAccessAlreadyEnabled`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceEnableDisablePeerAccess.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceEnablePeerAccess_negative") {
   int deviceCount = HipTest::getGeviceCount();
   if (deviceCount < 2) {
@@ -80,6 +109,40 @@ TEST_CASE("Unit_hipDeviceEnablePeerAccess_negative") {
   }
 }
 
+/**
+ * End doxygen group hipDeviceEnablePeerAccess.
+ * @}
+ */
+
+/**
+ * @addtogroup hipDeviceDisablePeerAccess hipDeviceDisablePeerAccess
+ * @{
+ * @ingroup PeerToPeerTest
+ * `hipDeviceDisablePeerAccess(int peerDeviceId);` -
+ * Disable direct access from current device's virtual address space to memory allocations
+ * physically located on a peer device.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipDeviceEnableDisablePeerAccess_positive
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When peer device ID is not valid, -1 or out of bounds
+ *      - Expected output: return `hipErrorInvalidDevice`
+ *    -# When peer access is not enabled
+ *      - Expected output: return `hipErrorPeerAccessNotEnabled`
+ *    -# When peer access has been disabled twice after enabling
+ *      - Expected output: return `hipErrorPeerAccessNotEnabled`
+ * Test source
+ * ------------------------
+ *  - unit/device/hipDeviceEnableDisablePeerAccess.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDeviceDisablePeerAccess_negative") {
   int deviceCount = HipTest::getGeviceCount();
   if (deviceCount < 2) {

@@ -17,19 +17,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-hipArrayCreate API test scenarios
-1. Negative Scenarios
-2. Allocating Small and big chunk data
-3. Multithreaded scenario
-*/
-
 #include <array>
 #include <numeric>
 #include <hip_test_common.hh>
 #include <hip_array_common.hh>
 #include "hipArrayCommon.hh"
 #include "DriverContext.hh"
+
+/**
+ * @addtogroup hipArrayCreate hipArrayCreate
+ * @{
+ * @ingroup MemoryTest
+ * `hipArrayCreate(hipArray** pHandle, const HIP_ARRAY_DESCRIPTOR* pAllocateArray)` -
+ * Creates a 1D or 2D array.
+ */
 
 static constexpr size_t NUM_W{4};
 static constexpr size_t BIGNUM_W{100};
@@ -50,7 +51,6 @@ static constexpr auto ARRAY_LOOP{100};
  * after releasing the memory should be the same.
  *
  */
-
 static void ArrayCreate_DiffSizes(int gpu) {
   HIP_CHECK_THREAD(hipSetDevice(gpu));
   //Use of GENERATE in thead function causes random failures with multithread condition.
@@ -77,17 +77,36 @@ static void ArrayCreate_DiffSizes(int gpu) {
   }
 }
 
-/* This testcase verifies hipArrayCreate API for small and big chunks data*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that array can be created correctly when multiple arrays
+ *    of small and big chunks of float data are allocated.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArrayCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArrayCreate_DiffSizes") {
   ArrayCreate_DiffSizes(0);
   HIP_CHECK_THREAD_FINALIZE();
 }
 
-/*
-This testcase verifies the hipArrayCreate API in multithreaded
-scenario by launching threads in parallel on multiple GPUs
-and verifies the hipArrayCreate API with small and big chunks data
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that array can be created correctly when multiple arrays
+ *    of small and big chunks of float data are allocated in multiple threads
+ *    on separate devices.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArrayCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArrayCreate_MultiThread") {
   std::vector<std::thread> threadlist;
   int devCnt = 0;
@@ -209,8 +228,18 @@ void testArrayAsTexture(hiparray array, const size_t width, const size_t height)
   HIP_CHECK(hipFree(device_data));
 }
 
-// Selection of types chosen since trying all types would be slow to compile
-// Test the happy path of the hipArrayCreate
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that array can be created correctly for different types
+ *    of data when texture is generated from it and reading from texture is successful.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArrayCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipArrayCreate_happy", "", uint, int, int4, ushort, short2, char, uchar2,
                    char4, float, float2, float4) {
   using vec_info = vector_info<TestType>;
@@ -232,8 +261,20 @@ TEMPLATE_TEST_CASE("Unit_hipArrayCreate_happy", "", uint, int, int4, ushort, sho
   HIP_CHECK(hipArrayDestroy(array));
 }
 
-
-// Only widths and Heights up to the maxTexture size is supported
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that array can be created correctly for different types of data
+ *    when its width/height are set to maximal size.
+ *  - Maximal size corresponds to maximal texture width/height.
+ *  - This test can fail with `hipErrorOutOfMemory`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArrayCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipArrayCreate_maxTexture", "", uint, int, int4, ushort, short2, char,
                    uchar2, char4, float, float2, float4) {
   using vec_info = vector_info<TestType>;
@@ -292,7 +333,18 @@ TEMPLATE_TEST_CASE("Unit_hipArrayCreate_maxTexture", "", uint, int, int4, ushort
   }
 }
 
-// zero-width array is not supported
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when array width is zero:
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArrayCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArrayCreate_ZeroWidth") {
   DriverContext ctx;
   HIP_ARRAY_DESCRIPTOR desc;
@@ -306,7 +358,21 @@ TEST_CASE("Unit_hipArrayCreate_ZeroWidth") {
   HIP_CHECK_ERROR(hipArrayCreate(&array, &desc), hipErrorInvalidValue);
 }
 
-// HipArrayCreate will return an error when nullptr is used as the array argument
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of passing `nullptr` arguments:
+ *    -# When output pointer to the array is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When pointer to the array descriptor is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArrayCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArrayCreate_Nullptr") {
   DriverContext ctx;
   SECTION("Null array") {
@@ -324,7 +390,19 @@ TEST_CASE("Unit_hipArrayCreate_Nullptr") {
   }
 }
 
-// Only elements with 1,2, or 4 channels is supported
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel number in descriptor
+ *    is not valid
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArrayCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArrayCreate_BadNumberChannelElement") {
   DriverContext ctx;
   HIP_ARRAY_DESCRIPTOR desc;
@@ -340,7 +418,18 @@ TEST_CASE("Unit_hipArrayCreate_BadNumberChannelElement") {
   HIP_CHECK_ERROR(hipArrayCreate(&array, &desc), hipErrorInvalidValue);
 }
 
-// Only certain channel formats are acceptable.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel format in descriptor is not valid
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArrayCreate.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArrayCreate_BadChannelFormat") {
   DriverContext ctx;
   HIP_ARRAY_DESCRIPTOR desc;

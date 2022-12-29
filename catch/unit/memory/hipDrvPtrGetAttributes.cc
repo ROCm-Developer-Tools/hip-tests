@@ -20,27 +20,41 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- *  Tests for hipDrvPointerGetAttributes API
- Functional Tests:
-   1. Pass multiple device related attributes in the attributes of hipDrvPointerGetAttributes API
-      for the device pointer and check the behaviour
-   2. Pass device and host attributes in the attributes of hipDrvPointerGetAttributes API and validate the behaviour
-   3. Pass invalid pointer to hipDrvPointerGetAttributes API and validate the behaviour.
-
- Negative Tests:
-  1. Pass invalid numAttributes
-  2. Pass nullptr to attributes
-  3. Pass nullptr to data
-  4. Pass nullptr to device pointer
-*/
 #include <hip_test_common.hh>
+
+/**
+ * @addtogroup hipDrvPointerGetAttributes hipDrvPointerGetAttributes
+ * @{
+ * @ingroup MemoryTest
+ * `hipDrvPointerGetAttributes(unsigned int numAttributes, hipPointer_attribute* attributes,
+ * void** data, hipDeviceptr_t ptr)` -
+ * Returns information about the specified pointer.[BETA]
+ */
 
 static size_t Nbytes = 0;
 constexpr size_t N {1000000};
 
-/* This testcase verifies Negative Scenarios of
- * hipDrvPointerGetAttributes API */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling of invalid arguments:
+ *    -# When pointer to the attributes to query for is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When output pointer to the data array is `nullptr`
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When device pointer is `nullptr`
+ *      - Platform specific (AMD)
+ *      - Expected output: return `hipErrorInvalidValue`
+ *    -# When dependencies are not valid
+ *      - Platform specific (NVIDIA)
+ *      - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipDrvPtrGetAttributes.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDrvPtrGetAttributes_Negative") {
   HIP_CHECK(hipSetDevice(0));
   Nbytes = N * sizeof(int);
@@ -89,7 +103,21 @@ TEST_CASE("Unit_hipDrvPtrGetAttributes_Negative") {
 #endif
 }
 
-// Testcase verifies functional scenarios of hipDrvPointerGetAttributes API
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies functional scenarios:
+ *    -# Pass multiple device related attributes in the attributes for the
+ *       device pointer and check the behaviour.
+ *    -# Pass device and host attributes in the attributes and validate the behaviour.
+ *    -# Pass host pointer to host pointer and validate the behaviour.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipDrvPtrGetAttributes.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipDrvPtrGetAttributes_Functional") {
   HIP_CHECK(hipSetDevice(0));
   Nbytes = N * sizeof(int);

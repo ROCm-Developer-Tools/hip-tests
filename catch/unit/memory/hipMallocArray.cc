@@ -17,19 +17,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
-hipMallocArray API test scenarios
-1. Basic Functionality
-2. Negative Scenarios
-3. Allocating Small and big chunk data
-4. Multithreaded scenario
-*/
-
 #include <hip_test_common.hh>
 #include <hip_array_common.hh>
 #include <limits>
 #include <numeric>
 #include "hipArrayCommon.hh"
+
+/**
+ * @addtogroup hipMallocArray hipMallocArray
+ * @{
+ * @ingroup MemoryTest
+ * `hipMallocArray(hipArray** array, const hipChannelFormatDesc* desc, size_t width,
+ * size_t height __dparm(0), unsigned int flags __dparm(hipArrayDefault))` -
+ * Allocate an array on the device.
+ */
 
 static constexpr size_t NUM_W{4};
 static constexpr size_t NUM_H{4};
@@ -73,16 +74,36 @@ static void MallocArray_DiffSizes(int gpu) {
   }
 }
 
+/**
+ * Test Description
+ * ------------------------
+ *  - Validate that allocation is successfully performed when
+ *    multiple arrays of small and big chunks of float data are allocated.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_DiffSizes") {
   MallocArray_DiffSizes(0);
   HIP_CHECK_THREAD_FINALIZE();
 }
 
-/*
-This testcase verifies the hipMallocArray API in multithreaded
-scenario by launching threads in parallel on multiple GPUs
-and verifies the hipMallocArray API with small and big chunks data
-*/
+/**
+ * Test Description
+ * ------------------------
+ *  - Verifies the API in multithreaded scenario by launching
+ *    threads in parallel on multiple GPUs.
+ *  - Verifies the hipMallocArray API with small and big chunks data.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_MultiThread") {
   std::vector<std::thread> threadlist;
   int devCnt = 0;
@@ -382,8 +403,19 @@ void testArrayAsSurface(hipArray_t arrayPtr, const size_t width, const size_t he
   HIP_CHECK(hipFree(device_data));
 }
 
-// The happy path of a default array and a SurfaceLoadStore array should work
-// Selection of types chosen to reduce compile times
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that array allocation is working correctly for different types
+ *    of data when texture is generated from it and reading from texture is successful.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - Platform specific (NVIDIA)
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMallocArray_happy", "", uint, int, int4, ushort, short2, char, uchar2,
                    char4, float, float2, float4) {
 
@@ -424,8 +456,20 @@ TEMPLATE_TEST_CASE("Unit_hipMallocArray_happy", "", uint, int, int4, ushort, sho
   HIP_CHECK(hipFreeArray(arrayPtr));
 }
 
-// Arrays can be up to the size of maxTexture* but no bigger
-// EXSWCPHIPT-71 - no equivalent value for maxSurface and maxTexture2DGather.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates that array allocation is working correctly for different
+ *    types of data when its width/height are set to maximal size.
+ *  - Maximal size corresponds to maximal texture width/height.
+ *  - This test can fail with `hipErrorOutOfMemory`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMallocArray_MaxTexture_Default", "", uint, int4, ushort, short2, char,
                    char4, float2, float4) {
   size_t width, height;
@@ -482,8 +526,19 @@ TEMPLATE_TEST_CASE("Unit_hipMallocArray_MaxTexture_Default", "", uint, int4, ush
   }
 }
 
-
-// Arrays with channels of different size are not allowed.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel sizes are different:
+ *    - Expected output (AMD): return `hipErrorInvalidValue`
+ *    - Expected output (NVIDIA): return `hipErrorUnknown`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_DifferentChannelSizes") {
   const int bitsX = GENERATE(8, 16, 32);
   const int bitsY = GENERATE(8, 16, 32);
@@ -521,7 +576,18 @@ TEST_CASE("Unit_hipMallocArray_Negative_DifferentChannelSizes") {
 #endif
 }
 
-// Zero-width array is not supported
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when width is zero:
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_ZeroWidth") {
   hipChannelFormatDesc desc = hipCreateChannelDesc<float4>();
 
@@ -535,21 +601,54 @@ TEST_CASE("Unit_hipMallocArray_Negative_ZeroWidth") {
                   hipErrorInvalidValue);
 }
 
-// Providing the array pointer as nullptr should return an error
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when the output pointer to array is `nullptr`:
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_NullArrayPtr") {
   hipChannelFormatDesc desc = hipCreateChannelDesc<float4>();
 
   HIP_CHECK_ERROR(hipMallocArray(nullptr, &desc, 1024, 0, hipArrayDefault), hipErrorInvalidValue);
 }
 
-// Providing the desc pointer as nullptr should return an error
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when descriptor pointer is `nullptr`:
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_NullDescPtr") {
   hipArray_t arrayPtr;
   HIP_CHECK_ERROR(hipMallocArray(&arrayPtr, nullptr, 1024, 0, hipArrayDefault),
                   hipErrorInvalidValue);
 }
 
-// Inappropriate but related flags should still return an error
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when flags are not valid for 1D and 2D:
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_BadFlags") {
   hipChannelFormatDesc desc = hipCreateChannelDesc<float4>();
 
@@ -575,7 +674,19 @@ TEST_CASE("Unit_hipMallocArray_Negative_BadFlags") {
   }
 }
 
-// 8-bit float channels are not supported
+/**
+ * Test Description
+ * ------------------------
+ *  - Vallidates handling when descriptor is set for 8-bit float channels:
+ *    - Expected output (AMD): return `hipErrorInvalidValue`
+ *    - Expected output (NVIDIA): return `hipErrorUnknown`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEMPLATE_TEST_CASE("Unit_hipMallocArray_Negative_8bitFloat", "", float, float2, float4) {
   hipChannelFormatDesc desc = GENERATE(hipCreateChannelDesc(8, 0, 0, 0, hipChannelFormatKindFloat),
                                        hipCreateChannelDesc(8, 8, 0, 0, hipChannelFormatKindFloat),
@@ -593,7 +704,19 @@ TEMPLATE_TEST_CASE("Unit_hipMallocArray_Negative_8bitFloat", "", float, float2, 
 #endif
 }
 
-// Only 8, 16, and 32 bit channels are supported
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel sizes in descriptor are not valid:
+ *    - Expected output (AMD): return `hipErrorInvalidValue`
+ *    - Expected output (NVIDIA): return `hipErrorUnknown`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_BadNumberOfBits") {
   const int badBits = GENERATE(-1, 0, 10, 100);
   const hipChannelFormatKind formatKind =
@@ -619,7 +742,19 @@ TEST_CASE("Unit_hipMallocArray_Negative_BadNumberOfBits") {
 #endif
 }
 
-// creating elements with 3 channels is not supported.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel number in descriptor is equal t o 3:
+ *    - Expected output (AMD): return `hipErrorInvalidValue`
+ *    - Expected output (NVIDIA): return `hipErrorUnknown`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_3ChannelElement") {
   const int bits = GENERATE(8, 16, 32);
   hipChannelFormatKind formatKind =
@@ -645,7 +780,19 @@ TEST_CASE("Unit_hipMallocArray_Negative_3ChannelElement") {
 #endif
 }
 
-// The bit channel description should not allow any channels after a zero channel
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when there is a channel after a zero chanel is set as parameter:
+ *    - Expected output (AMD): return `hipErrorInvalidValue`
+ *    - Expected output (NVIDIA): return `hipErrorUnknown`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_ChannelAfterZeroChannel") {
   const int bits = GENERATE(8, 16, 32);
   const hipChannelFormatKind formatKind =
@@ -672,7 +819,19 @@ TEST_CASE("Unit_hipMallocArray_Negative_ChannelAfterZeroChannel") {
 #endif
 }
 
-// The channel format should be one of the defined formats
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when channel format in descriptor is not valid:
+ *    - Expected output (AMD): return `hipErrorInvalidValue`
+ *    - Expected output (NVIDIA): return `hipErrorUnknown`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_InvalidChannelFormat") {
   const int bits = 32;
   hipChannelFormatKind formatKind = static_cast<hipChannelFormatKind>(0xFF);
@@ -695,8 +854,18 @@ TEST_CASE("Unit_hipMallocArray_Negative_InvalidChannelFormat") {
 #endif
 }
 
-
-// hipMallocArray should handle the max numeric value gracefully.
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when width/height sizes are equal to a maximal possible numerical value:
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMallocArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMallocArray_Negative_NumericLimit") {
   hipArray_t arrayPtr;
   hipChannelFormatDesc desc = hipCreateChannelDesc<float>();

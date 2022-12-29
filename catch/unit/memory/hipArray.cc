@@ -17,37 +17,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 #include <hip_test_common.hh>
-TEST_CASE("Unit_hipArray_Valid") {
-    hipArray* array = nullptr;
-    HIP_ARRAY_DESCRIPTOR desc;
-    desc.Format = HIP_AD_FORMAT_FLOAT;
-    desc.NumChannels = 1;
-    desc.Width = 1024;
-    desc.Height = 1024;
-    HIP_CHECK(hipArrayCreate(&array, &desc));
-    HIP_CHECK(hipFreeArray(array));
-}
-TEST_CASE("Unit_hipArray_Invalid") {
-    void* data = malloc(sizeof(char));
-    hipArray_t arrayPtr = static_cast<hipArray*>(data);
-    REQUIRE(hipFreeArray(arrayPtr) == hipErrorContextIsDestroyed);
-    free(data);
-}
-TEST_CASE("Unit_hipArray_Nullptr") {
-    hipArray* array = nullptr;
-    REQUIRE(hipFreeArray(array) == hipErrorInvalidValue);
-}
-TEST_CASE("Unit_hipArray_DoubleFree") {
-    hipArray* array = nullptr;
-    HIP_ARRAY_DESCRIPTOR desc;
-    desc.Format = HIP_AD_FORMAT_FLOAT;
-    desc.NumChannels = 1;
-    desc.Width = 1024;
-    desc.Height = 1024;
-    HIP_CHECK(hipArrayCreate(&array, &desc));
-    HIP_CHECK(hipFreeArray(array));
-    REQUIRE(hipFreeArray(array) == hipErrorContextIsDestroyed);
-}
+
+/**
+ * @addtogroup hipArrayDestroy hipArrayDestroy
+ * @{
+ * @ingroup MemoryTest
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when array destroy is called three times:
+ *    - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArray_TrippleDestroy") {
     hipArray* array = nullptr;
     HIP_ARRAY_DESCRIPTOR desc;
@@ -60,11 +48,138 @@ TEST_CASE("Unit_hipArray_TrippleDestroy") {
     REQUIRE(hipArrayDestroy(array) == hipErrorContextIsDestroyed);
     REQUIRE(hipArrayDestroy(array) == hipErrorContextIsDestroyed);
 }
+
+/**
+ * End doxygen group hipArrayDestroy.
+ * @}
+ */
+
+/**
+ * @addtogroup hipFreeArray hipFreeArray
+ * @{
+ * @ingroup MemoryTest
+ * `hipFreeArray(hipArray* array)` -
+ * Frees an array on the device.
+ * ________________________
+ * Test cases from other modules:
+ *  - @ref Unit_hipFreeImplicitSyncArray
+ *  - @ref Unit_hipFreeMultiTArray
+ *  - @ref Unit_hipFreeNegativeArray
+ *  - @ref Unit_hipFreeDoubleArray
+ */
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Successfully frees a created array.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipArray_Valid") {
+    hipArray* array = nullptr;
+    HIP_ARRAY_DESCRIPTOR desc;
+    desc.Format = HIP_AD_FORMAT_FLOAT;
+    desc.NumChannels = 1;
+    desc.Width = 1024;
+    desc.Height = 1024;
+    HIP_CHECK(hipArrayCreate(&array, &desc));
+    HIP_CHECK(hipFreeArray(array));
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when array is not initialized
+ *    - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipArray_Invalid") {
+    void* data = malloc(sizeof(char));
+    hipArray_t arrayPtr = static_cast<hipArray*>(data);
+    REQUIRE(hipFreeArray(arrayPtr) == hipErrorContextIsDestroyed);
+    free(data);
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when array is `nullptr`
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipArray_Nullptr") {
+    hipArray* array = nullptr;
+    REQUIRE(hipFreeArray(array) == hipErrorInvalidValue);
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when the array is freed twice:
+ *    - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipArray_DoubleFree") {
+    hipArray* array = nullptr;
+    HIP_ARRAY_DESCRIPTOR desc;
+    desc.Format = HIP_AD_FORMAT_FLOAT;
+    desc.NumChannels = 1;
+    desc.Width = 1024;
+    desc.Height = 1024;
+    HIP_CHECK(hipArrayCreate(&array, &desc));
+    HIP_CHECK(hipFreeArray(array));
+    REQUIRE(hipFreeArray(array) == hipErrorContextIsDestroyed);
+}
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when `nullptr` array is freed twice:
+ *    - Expected output: return `hipErrorInvalidValue`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArray_DoubleNullptr") {
     hipArray* array = nullptr;
     REQUIRE(hipFreeArray(array) == hipErrorInvalidValue);
     REQUIRE(hipFreeArray(array) == hipErrorInvalidValue);
 }
+
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates handling when the uninitialized array is freed twice:
+ *    - Expected output: return `hipErrorContextIsDestroyed`
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipArray.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipArray_DoubleInvalid") {
     void* data = malloc(sizeof(char));
     hipArray_t arrayPtr = static_cast<hipArray*>(data);

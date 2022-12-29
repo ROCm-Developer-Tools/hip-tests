@@ -17,17 +17,16 @@
  * THE SOFTWARE.
 */
 
-/**
- Testcase Scenarios :
- 1) Order of execution of device kernel and hipMemset2DAsync api
- 2) hipMemSet2DAsync execution in multiple threads
-*/
-
 #include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
 #include <hip_test_helper.hh>
 #include <hip_test_kernels.hh>
 
+/**
+ * @addtogroup hipMemset2DAsync hipMemset2DAsync
+ * @{
+ * @ingroup MemoryTest
+ */
 
 /* Defines */
 #define NUM_THREADS 1000
@@ -48,6 +47,21 @@ void queueJobsForhipMemset2DAsync(char* A_d, char* A_h, size_t pitch,
 
 /**
  * Order of execution of device kernel and hipMemset2DAsync api.
+ */
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates order of execution of device kernel and
+ *    asynchronous memset.
+ *  - Validates the results, utilizing following streams:
+ *    -# Created (non-null) stream
+ *    -# Stream per thread
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset2DAsyncMultiThreadAndKernel.cc
+ * Test requirements
+ * ------------------------
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset2DAsync_WithKernel") {
   constexpr auto N = 4 * 1024 * 1024;
@@ -127,9 +141,18 @@ TEST_CASE("Unit_hipMemset2DAsync_WithKernel") {
   free(A_h); free(B_h);
 }
 
-
 /**
- * hipMemSet2DAsync execution in multiple threads.
+ * Test Description
+ * ------------------------
+ *  - Executes memset 2D asynchronously wihin multiple threads
+ *    on one device.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemset2DAsyncMultiThreadAndKernel.cc
+ * Test requirements
+ * ------------------------
+ *  - Multi-threaded device
+ *  - HIP_VERSION >= 5.2
  */
 TEST_CASE("Unit_hipMemset2DAsync_MultiThread") {
   constexpr auto memPerThread = 200;

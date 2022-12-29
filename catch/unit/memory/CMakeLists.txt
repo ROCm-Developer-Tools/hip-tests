@@ -25,17 +25,29 @@ set(TEST_SRC
     memset.cc
     malloc.cc
     hipMemcpy2DToArray.cc
+    hipMemcpy2DToArray_old.cc
     hipMemcpy2DToArrayAsync.cc
+    hipMemcpy2DToArrayAsync_old.cc
     hipMemcpy3D.cc
+    hipMemcpy3D_old.cc
     hipMemcpy3DAsync.cc
+    hipMemcpy3DAsync_old.cc
     hipMemcpyParam2D.cc
+    hipMemcpyParam2D_old.cc
     hipMemcpyParam2DAsync.cc
+    hipMemcpyParam2DAsync_old.cc
     hipMemcpy2D.cc
+    hipMemcpy2D_old.cc
     hipMemcpy2DAsync.cc
+    hipMemcpy2DAsync_old.cc
     hipMemcpy2DFromArray.cc
+    hipMemcpy2DFromArray_old.cc
     hipMemcpy2DFromArrayAsync.cc
+    hipMemcpy2DFromArrayAsync_old.cc
     hipMemcpyAtoH.cc
+    hipMemcpyAtoH_old.cc
     hipMemcpyHtoA.cc
+    hipMemcpyHtoA_old.cc
     hipMemcpyAllApiNegative.cc
     hipMemcpy_MultiThread.cc
     hipHostRegister.cc
@@ -60,11 +72,15 @@ set(TEST_SRC
     hipMemCoherencyTst.cc
     hipMallocManaged.cc
     hipMemRangeGetAttribute.cc
+    hipMemRangeGetAttribute_old.cc
     hipMemcpyFromSymbol.cc
     hipPtrGetAttribute.cc
     hipMemPoolApi.cc
     hipMemcpyPeer.cc
+    hipMemcpyPeer_old.cc
     hipMemcpyPeerAsync.cc
+    hipMemcpyWithStream_old.cc
+    hipMemcpyPeerAsync_old.cc
     hipMemcpyWithStream.cc
     hipMemcpyWithStreamMultiThread.cc
     hipMemsetAsyncAndKernel.cc
@@ -74,9 +90,15 @@ set(TEST_SRC
     hipMemcpyDtoD.cc
     hipMemcpyDtoDAsync.cc
     hipHostMalloc.cc
+    hipMemcpy_old.cc
     hipMemcpy.cc
+    hipMemcpy_derivatives.cc
+    hipMemcpyAsync_old.cc
     hipMemcpyAsync.cc
+    hipMemcpyAsync_derivatives.cc
     hipMemsetFunctional.cc
+    hipMalloc.cc
+    hipExtMallocWithFlags.cc
     hipMallocPitch.cc
     hipMallocArray.cc
     hipMalloc3D.cc
@@ -84,7 +106,9 @@ set(TEST_SRC
     hipArrayCreate.cc
     hipArray3DCreate.cc
     hipDrvMemcpy3D.cc
+    hipDrvMemcpy3D_old.cc
     hipDrvMemcpy3DAsync.cc
+    hipDrvMemcpy3DAsync_old.cc
     hipPointerGetAttribute.cc
     hipDrvPtrGetAttributes.cc
     hipMallocMngdMultiThread.cc
@@ -96,8 +120,14 @@ set(TEST_SRC
     hipMemcpySync.cc
     hipMemsetSync.cc
     hipMemsetAsync.cc
+    hipMemAdvise_old.cc
     hipMemAdvise.cc
     hipMemRangeGetAttributes.cc
+    hipMallocMipmappedArray.cc
+    hipFreeMipmappedArray.cc
+    hipMemRangeGetAttributes_old.cc
+    hipStreamAttachMemAsync.cc
+    hipMemGetAddressRange.cc
 )
 else()
 set(TEST_SRC
@@ -105,17 +135,29 @@ set(TEST_SRC
     memset.cc
     malloc.cc
     hipMemcpy2DToArray.cc
+    hipMemcpy2DToArray_old.cc
     hipMemcpy2DToArrayAsync.cc
+    hipMemcpy2DToArrayAsync_old.cc
     hipMemcpy3D.cc
+    hipMemcpy3D_old.cc
     hipMemcpy3DAsync.cc
+    hipMemcpy3DAsync_old.cc
     hipMemcpyParam2D.cc
+    hipMemcpyParam2D_old.cc
     hipMemcpyParam2DAsync.cc
+    hipMemcpyParam2DAsync_old.cc
     hipMemcpy2D.cc
+    hipMemcpy2D_old.cc
     hipMemcpy2DAsync.cc
+    hipMemcpy2DAsync_old.cc
     hipMemcpy2DFromArray.cc
+    hipMemcpy2DFromArray_old.cc
     hipMemcpy2DFromArrayAsync.cc
+    hipMemcpy2DFromArrayAsync_old.cc
     hipMemcpyAtoH.cc
+    hipMemcpyAtoH_old.cc
     hipMemcpyHtoA.cc
+    hipMemcpyHtoA_old.cc
     hipMemcpyAllApiNegative.cc
     hipMemcpy_MultiThread.cc
     hipHostRegister.cc
@@ -137,11 +179,15 @@ set(TEST_SRC
     hipMemAdviseMmap.cc
     hipMallocManaged.cc
     hipMemRangeGetAttribute.cc
+    hipMemRangeGetAttribute_old.cc
     hipMemcpyFromSymbol.cc
     hipPtrGetAttribute.cc
     hipMemPoolApi.cc
     hipMemcpyPeer.cc
+    hipMemcpyPeer_old.cc
     hipMemcpyPeerAsync.cc
+    hipMemcpyWithStream_old.cc
+    hipMemcpyPeerAsync_old.cc
     hipMemcpyWithStream.cc
     hipMemcpyWithStreamMultiThread.cc
     hipMemsetAsyncAndKernel.cc
@@ -151,9 +197,14 @@ set(TEST_SRC
     hipMemcpyDtoD.cc
     hipMemcpyDtoDAsync.cc
     hipHostMalloc.cc
+    hipMemcpy_old.cc
     hipMemcpy.cc
+    hipMemcpy_derivatives.cc
+    hipMemcpyAsync_old.cc
     hipMemcpyAsync.cc
+    hipMemcpyAsync_derivatives.cc
     hipMemsetFunctional.cc
+    hipMalloc.cc
     hipMallocPitch.cc
     hipMallocArray.cc
     hipMalloc3D.cc
@@ -161,7 +212,9 @@ set(TEST_SRC
     hipArrayCreate.cc
     hipArray3DCreate.cc
     hipDrvMemcpy3D.cc
+    hipDrvMemcpy3D_old.cc
     hipDrvMemcpy3DAsync.cc
+    hipDrvMemcpy3DAsync_old.cc
     hipPointerGetAttribute.cc
     hipDrvPtrGetAttributes.cc
     hipMemPrefetchAsync.cc
@@ -170,9 +223,15 @@ set(TEST_SRC
     hipMemcpySync.cc
     hipMemsetSync.cc
     hipMemsetAsync.cc
+    hipMemAdvise_old.cc
     hipMemAdvise.cc
     hipMemRangeGetAttributes.cc
+    hipMemRangeGetAttributes_old.cc
     hipGetSymbolSizeAddress.cc
+    hipMallocMipmappedArray.cc
+    hipFreeMipmappedArray.cc
+    hipStreamAttachMemAsync.cc
+    hipMemGetAddressRange.cc
 )
 endif()
 

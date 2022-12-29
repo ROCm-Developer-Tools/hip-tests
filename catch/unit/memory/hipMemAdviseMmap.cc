@@ -25,11 +25,24 @@ THE SOFTWARE.
   #include <unistd.h>
 #endif
 
+/**
+ * @addtogroup hipMemAdvise hipMemAdvise
+ * @{
+ * @ingroup MemoryMTest
+ */
 
-/* Test Description: The following test case tests the working of
-   hipMemAdvise() works with mmap() memory
-*/
-
+/**
+ * Test Description
+ * ------------------------
+ *  - Validates the case when advised memory works with mapped memory.
+ * Test source
+ * ------------------------
+ *  - unit/memory/hipMemAdviseMmap.cc
+ * Test requirements
+ * ------------------------
+ *  - Device supports pageable memory access
+ *  - HIP_VERSION >= 5.2
+ */
 TEST_CASE("Unit_hipMemAdvise_MmapMem") {
   int managed = 0, NUM_ELMS = 212992, PageableMem = 0;
   INFO("The following are the attribute values related to HMM for"
