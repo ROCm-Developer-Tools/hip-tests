@@ -37,11 +37,10 @@ Testcase Scenarios :
     - Input event is an uninitialized node.
 */
 
-#include <hip_test_common.hh>
 #include <hip_test_checkers.hh>
+#include <hip_test_common.hh>
 #include <hip_test_kernels.hh>
 
-#define LEN 512
 
 /**
  * Local Function
@@ -54,8 +53,7 @@ static void validateEventWaitNodeSetEvent(unsigned flag) {
   HIP_CHECK(hipEventCreate(&event1));
   HIP_CHECK(hipEventCreateWithFlags(&event2, flag));
   hipGraphNode_t eventwait;
-  HIP_CHECK(hipGraphAddEventWaitNode(&eventwait, graph, nullptr, 0,
-                                                            event1));
+  HIP_CHECK(hipGraphAddEventWaitNode(&eventwait, graph, nullptr, 0, event1));
   // Set a different event
   HIP_CHECK(hipGraphEventWaitNodeSetEvent(eventwait, event2));
   HIP_CHECK(hipGraphEventWaitNodeGetEvent(eventwait, &event_out));
@@ -78,11 +76,9 @@ static void setEventRecordNode() {
   HIP_CHECK(hipEventCreate(&event1));
   HIP_CHECK(hipEventCreate(&event2));
   hipGraphNode_t eventrec;
-  HIP_CHECK(hipGraphAddEventRecordNode(&eventrec, graph, nullptr, 0,
-                                                            event1));
+  HIP_CHECK(hipGraphAddEventRecordNode(&eventrec, graph, nullptr, 0, event1));
   // Set a different event eventrec using hipGraphEventWaitNodeSetEvent
-  REQUIRE(hipErrorInvalidValue ==
-          hipGraphEventWaitNodeSetEvent(eventrec, event2));
+  HIP_CHECK_ERROR(hipGraphEventWaitNodeSetEvent(eventrec, event2), hipErrorInvalidValue);
   // Free resources
   HIP_CHECK(hipGraphDestroy(graph));
   HIP_CHECK(hipEventDestroy(event1));
@@ -93,11 +89,12 @@ static void setEventRecordNode() {
  * Scenario 2
  */
 TEST_CASE("Unit_hipGraphEventWaitNodeSetEvent_SetProp") {
-  size_t memsize = LEN * sizeof(int);
+  constexpr size_t N = 512;
+  size_t memsize = N * sizeof(int);
   constexpr auto blocksPerCU = 6;  // to hide latency
   constexpr auto threadsPerBlock = 256;
-  unsigned blocks = HipTest::setNumBlocks(blocksPerCU, threadsPerBlock, LEN);
-  size_t NElem{LEN};
+  unsigned blocks = HipTest::setNumBlocks(blocksPerCU, threadsPerBlock, N);
+  size_t NElem{N};
   hipGraph_t graph1, graph2;
   hipStream_t streamForGraph1, streamForGraph2;
   hipGraphExec_t graphExec1, graphExec2;
@@ -123,67 +120,56 @@ TEST_CASE("Unit_hipGraphEventWaitNodeSetEvent_SetProp") {
   HIP_CHECK(hipMalloc(&out_d_g1, memsize));
   HIP_CHECK(hipMalloc(&out_d_g2, memsize));
   // Initialize host buffer
-  for (uint32_t i = 0; i < LEN; i++) {
+  for (uint32_t i = 0; i < N; i++) {
     inp_h[i] = i;
     out_h_g1[i] = 0;
     out_h_g2[i] = 0;
   }
   // Graph1 creation ...........
   // Create event1 record node in graph1
-  HIP_CHECK(hipGraphAddEventRecordNode(&event_rec_node, graph1, nullptr, 0,
-                                                            event1));
+  HIP_CHECK(hipGraphAddEventRecordNode(&event_rec_node, graph1, nullptr, 0, event1));
 
   // Create memcpy and kernel nodes for graph1
   hipGraphNode_t memcpyH2D, memcpyD2H_1, kernelnode_1;
   hipKernelNodeParams kernelNodeParams1{};
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyH2D, graph1, nullptr, 0, inp_d,
-                inp_h, memsize, hipMemcpyHostToDevice));
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyD2H_1, graph1, nullptr, 0,
-                out_h_g1, out_d_g1, memsize, hipMemcpyDeviceToHost));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyH2D, graph1, nullptr, 0, inp_d, inp_h, memsize,
+                                    hipMemcpyHostToDevice));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyD2H_1, graph1, nullptr, 0, out_h_g1, out_d_g1, memsize,
+                                    hipMemcpyDeviceToHost));
 
-  void* kernelArgs1[] = {&inp_d, &out_d_g1, reinterpret_cast<void *>(&NElem)};
-  kernelNodeParams1.func =
-  reinterpret_cast<void *>(HipTest::vector_square<int>);
+  void* kernelArgs1[] = {&inp_d, &out_d_g1, reinterpret_cast<void*>(&NElem)};
+  kernelNodeParams1.func = reinterpret_cast<void*>(HipTest::vector_square<int>);
   kernelNodeParams1.gridDim = dim3(blocks);
   kernelNodeParams1.blockDim = dim3(threadsPerBlock);
   kernelNodeParams1.sharedMemBytes = 0;
   kernelNodeParams1.kernelParams = reinterpret_cast<void**>(kernelArgs1);
   kernelNodeParams1.extra = nullptr;
-  HIP_CHECK(hipGraphAddKernelNode(&kernelnode_1, graph1, nullptr, 0,
-                                  &kernelNodeParams1));
+  HIP_CHECK(hipGraphAddKernelNode(&kernelnode_1, graph1, nullptr, 0, &kernelNodeParams1));
   // Create dependencies for graph1
-  HIP_CHECK(hipGraphAddDependencies(graph1, &memcpyH2D,
-                                    &event_rec_node, 1));
-  HIP_CHECK(hipGraphAddDependencies(graph1, &event_rec_node,
-                                    &kernelnode_1, 1));
-  HIP_CHECK(hipGraphAddDependencies(graph1, &kernelnode_1,
-                                    &memcpyD2H_1, 1));
+  HIP_CHECK(hipGraphAddDependencies(graph1, &memcpyH2D, &event_rec_node, 1));
+  HIP_CHECK(hipGraphAddDependencies(graph1, &event_rec_node, &kernelnode_1, 1));
+  HIP_CHECK(hipGraphAddDependencies(graph1, &kernelnode_1, &memcpyD2H_1, 1));
 
   // Graph2 creation ...........
   // Create event1 record node in graph2
-  HIP_CHECK(hipGraphAddEventWaitNode(&event_wait_node, graph2, nullptr, 0,
-                                                            event1));
+  HIP_CHECK(hipGraphAddEventWaitNode(&event_wait_node, graph2, nullptr, 0, event1));
   // Create memcpy and kernel nodes for graph2
   hipGraphNode_t memcpyD2H_2, kernelnode_2;
   hipKernelNodeParams kernelNodeParams2{};
-  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyD2H_2, graph2, nullptr, 0,
-                out_h_g2, out_d_g2, memsize, hipMemcpyDeviceToHost));
+  HIP_CHECK(hipGraphAddMemcpyNode1D(&memcpyD2H_2, graph2, nullptr, 0, out_h_g2, out_d_g2, memsize,
+                                    hipMemcpyDeviceToHost));
 
-  void* kernelArgs2[] = {&inp_d, &out_d_g2, reinterpret_cast<void *>(&NElem)};
-  kernelNodeParams2.func =
-  reinterpret_cast<void *>(HipTest::vector_cubic<int>);
+  void* kernelArgs2[] = {&inp_d, &out_d_g2, reinterpret_cast<void*>(&NElem)};
+  kernelNodeParams2.func = reinterpret_cast<void*>(HipTest::vector_cubic<int>);
   kernelNodeParams2.gridDim = dim3(blocks);
   kernelNodeParams2.blockDim = dim3(threadsPerBlock);
   kernelNodeParams2.sharedMemBytes = 0;
   kernelNodeParams2.kernelParams = reinterpret_cast<void**>(kernelArgs2);
   kernelNodeParams2.extra = nullptr;
-  HIP_CHECK(hipGraphAddKernelNode(&kernelnode_2, graph2, nullptr, 0,
-                                  &kernelNodeParams2));
+  HIP_CHECK(hipGraphAddKernelNode(&kernelnode_2, graph2, nullptr, 0, &kernelNodeParams2));
   // Create dependencies for graph2
-  HIP_CHECK(hipGraphAddDependencies(graph2, &event_wait_node,
-                                    &kernelnode_2, 1));
-  HIP_CHECK(hipGraphAddDependencies(graph2, &kernelnode_2,
-                                    &memcpyD2H_2, 1));
+  HIP_CHECK(hipGraphAddDependencies(graph2, &event_wait_node, &kernelnode_2, 1));
+  HIP_CHECK(hipGraphAddDependencies(graph2, &kernelnode_2, &memcpyD2H_2, 1));
 
   // Instantiate and launch the graphs
   HIP_CHECK(hipGraphInstantiate(&graphExec1, graph1, nullptr, nullptr, 0));
@@ -198,16 +184,16 @@ TEST_CASE("Unit_hipGraphEventWaitNodeSetEvent_SetProp") {
   HIP_CHECK(hipStreamSynchronize(streamForGraph2));
   // Validate output
   bool btestPassed1 = true;
-  for (uint32_t i = 0; i < LEN; i++) {
-    if (out_h_g1[i] != (inp_h[i]*inp_h[i])) {
+  for (uint32_t i = 0; i < N; i++) {
+    if (out_h_g1[i] != (inp_h[i] * inp_h[i])) {
       btestPassed1 = false;
       break;
     }
   }
   REQUIRE(btestPassed1 == true);
   bool btestPassed2 = true;
-  for (uint32_t i = 0; i < LEN; i++) {
-    if (out_h_g2[i] != (inp_h[i]*inp_h[i]*inp_h[i])) {
+  for (uint32_t i = 0; i < N; i++) {
+    if (out_h_g2[i] != (inp_h[i] * inp_h[i] * inp_h[i])) {
       btestPassed2 = false;
       break;
     }
@@ -256,28 +242,24 @@ TEST_CASE("Unit_hipGraphEventWaitNodeSetEvent_Negative") {
   HIP_CHECK(hipEventCreate(&event1));
   HIP_CHECK(hipEventCreate(&event2));
   hipGraphNode_t eventwait;
-  HIP_CHECK(hipGraphAddEventWaitNode(&eventwait, graph, nullptr, 0,
-                                                        event1));
+  HIP_CHECK(hipGraphAddEventWaitNode(&eventwait, graph, nullptr, 0, event1));
   SECTION("node = nullptr") {
-    REQUIRE(hipErrorInvalidValue == hipGraphEventWaitNodeSetEvent(
-                                    nullptr, event2));
+    HIP_CHECK_ERROR(hipGraphEventWaitNodeSetEvent(nullptr, event2), hipErrorInvalidValue);
   }
 
   SECTION("event = nullptr") {
-    REQUIRE(hipErrorInvalidValue == hipGraphEventWaitNodeSetEvent(
-                                    eventwait, nullptr));
+    HIP_CHECK_ERROR(hipGraphEventWaitNodeSetEvent(eventwait, nullptr), hipErrorInvalidValue);
   }
 
   SECTION("input node is empty node") {
     hipGraphNode_t EmptyGraphNode;
     HIP_CHECK(hipGraphAddEmptyNode(&EmptyGraphNode, graph, nullptr, 0));
-    REQUIRE(hipErrorInvalidValue ==
-            hipGraphEventWaitNodeSetEvent(EmptyGraphNode, event2));
+    HIP_CHECK_ERROR(hipGraphEventWaitNodeSetEvent(EmptyGraphNode, event2), hipErrorInvalidValue);
   }
 
   SECTION("input node is memset node") {
     constexpr size_t Nbytes = 1024;
-    char *A_d;
+    char* A_d;
     hipGraphNode_t memset_A;
     hipMemsetParams memsetParams{};
     HIP_CHECK(hipMalloc(&A_d, Nbytes));
@@ -288,10 +270,8 @@ TEST_CASE("Unit_hipGraphEventWaitNodeSetEvent_Negative") {
     memsetParams.elementSize = sizeof(char);
     memsetParams.width = Nbytes;
     memsetParams.height = 1;
-    HIP_CHECK(hipGraphAddMemsetNode(&memset_A, graph, nullptr, 0,
-                                    &memsetParams));
-    REQUIRE(hipErrorInvalidValue ==
-            hipGraphEventWaitNodeSetEvent(memset_A, event2));
+    HIP_CHECK(hipGraphAddMemsetNode(&memset_A, graph, nullptr, 0, &memsetParams));
+    HIP_CHECK_ERROR(hipGraphEventWaitNodeSetEvent(memset_A, event2), hipErrorInvalidValue);
     HIP_CHECK(hipFree(A_d));
   }
 
@@ -301,14 +281,12 @@ TEST_CASE("Unit_hipGraphEventWaitNodeSetEvent_Negative") {
 
   SECTION("input node is uninitialized node") {
     hipGraphNode_t node_uninit{};
-    REQUIRE(hipErrorInvalidValue ==
-            hipGraphEventWaitNodeSetEvent(node_uninit, event2));
+    HIP_CHECK_ERROR(hipGraphEventWaitNodeSetEvent(node_uninit, event2), hipErrorInvalidValue);
   }
 
   SECTION("input event is uninitialized") {
     hipEvent_t event_uninit{};
-    REQUIRE(hipErrorInvalidValue == hipGraphEventWaitNodeSetEvent(
-                                    eventwait, event_uninit));
+    HIP_CHECK_ERROR(hipGraphEventWaitNodeSetEvent(eventwait, event_uninit), hipErrorInvalidValue);
   }
 
   HIP_CHECK(hipGraphDestroy(graph));
