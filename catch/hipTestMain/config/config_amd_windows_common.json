@@ -93,6 +93,19 @@
 	   "Note: needs to be enabled when streamPerThread issues are fixed",
 	   "Unit_hipStreamSynchronize_NullStreamAndStreamPerThread",
 	   "Note: intermittent Seg fault failure ",
-	   "Unit_hipGraphAddEventRecordNode_Functional_WithoutFlags"
+	   "Unit_hipGraphAddEventRecordNode_Functional_WithoutFlags",
+	   "Unit_hipFuncSetCacheConfig_Positive_Basic",
+	   "Unit_hipFuncSetCacheConfig_Negative_Parameters",
+	   "Unit_hipFuncSetSharedMemConfig_Positive_Basic",
+	   "Unit_hipFuncSetSharedMemConfig_Negative_Parameters",
+	   "Unit_hipFuncSetAttribute_Positive_MaxDynamicSharedMemorySize",
+	   "Unit_hipFuncSetAttribute_Positive_PreferredSharedMemoryCarveout",
+	   "Unit_hipFuncSetAttribute_Positive_Parameters",
+	   "Unit_hipFuncSetAttribute_Negative_Parameters",
+	   "NOTE: The following 4 tests are disabled due to defect - EXSWHTEC-240",
+	   "Unit_hipFuncSetCacheConfig_Negative_Not_Supported",
+	   "Unit_hipFuncSetSharedMemConfig_Negative_Not_Supported",
+	   "Unit_hipFuncSetAttribute_Positive_MaxDynamicSharedMemorySize_Not_Supported",
+	   "Unit_hipFuncSetAttribute_Positive_PreferredSharedMemoryCarveout_Not_Supported"
 	]
 }
