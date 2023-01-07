@@ -14,6 +14,19 @@
 	   "Unit_hipInit_Negative",
 	   "Unit_hipMemset_Negative_OutOfBoundsPtr",
 	   "Unit_hipDeviceReset_Positive_Basic",
-	   "Unit_hipDeviceReset_Positive_Threaded"
+	   "Unit_hipDeviceReset_Positive_Threaded",
+	   "Unit_hipFuncSetCacheConfig_Positive_Basic",
+	   "Unit_hipFuncSetCacheConfig_Negative_Parameters",
+	   "Unit_hipFuncSetSharedMemConfig_Positive_Basic",
+	   "Unit_hipFuncSetSharedMemConfig_Negative_Parameters",
+	   "Unit_hipFuncSetAttribute_Positive_MaxDynamicSharedMemorySize",
+	   "Unit_hipFuncSetAttribute_Positive_PreferredSharedMemoryCarveout",
+	   "Unit_hipFuncSetAttribute_Positive_Parameters",
+	   "Unit_hipFuncSetAttribute_Negative_Parameters",
+	   "NOTE: The following 4 tests are disabled due to defect - EXSWHTEC-240",
+	   "Unit_hipFuncSetCacheConfig_Negative_Not_Supported",
+	   "Unit_hipFuncSetSharedMemConfig_Negative_Not_Supported",
+	   "Unit_hipFuncSetAttribute_Positive_MaxDynamicSharedMemorySize_Not_Supported",
+	   "Unit_hipFuncSetAttribute_Positive_PreferredSharedMemoryCarveout_Not_Supported"
 	]
 }
