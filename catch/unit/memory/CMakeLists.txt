@@ -96,6 +96,7 @@ set(TEST_SRC
     hipMemcpySync.cc
     hipMemsetSync.cc
     hipMemsetAsync.cc
+    hipMemAdvise_old.cc
     hipMemAdvise.cc
     hipMemRangeGetAttributes.cc
 )
@@ -170,6 +171,7 @@ set(TEST_SRC
     hipMemcpySync.cc
     hipMemsetSync.cc
     hipMemsetAsync.cc
+    hipMemAdvise_old.cc
     hipMemAdvise.cc
     hipMemRangeGetAttributes.cc
     hipGetSymbolSizeAddress.cc
