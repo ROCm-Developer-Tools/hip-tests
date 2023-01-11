@@ -228,6 +228,7 @@ add_subdirectory(TypeQualifiers ${CATCH_BUILD_DIR}/TypeQualifiers)
 if(UNIX)
    add_subdirectory(multiproc ${CATCH_BUILD_DIR}/multiproc)
 endif()
+add_subdirectory(performance ${CATCH_BUILD_DIR}/performance)
 
 cmake_policy(POP)
 
