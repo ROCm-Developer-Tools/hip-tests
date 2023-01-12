@@ -77,18 +77,18 @@ TEST_CASE("Unit_hipGraphMemcpyNodeSetParams1D_Negative") {
 #if HT_AMD
   SECTION("Pass same pointer as source ptr and destination ptr") {
     ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, A_d, Nbytes,
-                                        hipMemcpyHostToDevice);
+                                        hipMemcpyDeviceToDevice);
     REQUIRE(hipErrorInvalidValue == ret);
   }
+#endif
   SECTION("Pass overlap memory where destination ptr is ahead of source ptr") {
     ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d, A_d-5, Nbytes,
-                                        hipMemcpyHostToDevice);
-    REQUIRE(hipSuccess == ret);
+                                        hipMemcpyDeviceToDevice);
+    REQUIRE(hipErrorInvalidValue == ret);
   }
-#endif
   SECTION("Pass overlap memory where source ptr is ahead of destination ptr") {
     ret = hipGraphMemcpyNodeSetParams1D(memcpyNode, A_d+5, A_d, Nbytes-5,
-                                        hipMemcpyHostToDevice);
+                                        hipMemcpyDeviceToDevice);
     REQUIRE(hipErrorInvalidValue == ret);
   }
   SECTION("Copy more than allocated memory") {
