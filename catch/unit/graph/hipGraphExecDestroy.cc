@@ -18,14 +18,13 @@ THE SOFTWARE.
 */
 
 #include <hip_test_common.hh>
-#include <hip_test_checkers.hh>
 
 /**
- * @addtogroup hipGraphLaunch hipGraphLaunch
+ * @addtogroup hipGraphExecDestroy hipGraphExecDestroy
  * @{
  * @ingroup GraphTest
- * `hipGraphLaunch(hipGraphExec_t graphExec, hipStream_t stream)` -
- * Launches an executable graph in a stream
+ * `hipGraphExecDestroy(hipGraphExec_t graphExec)` -
+ * Destroys an executable graph
  */
 
 static void HostFunctionSetToZero(void* arg) {
@@ -58,88 +57,38 @@ static void CreateTestExecutableGraph(hipGraphExec_t* graph_exec, int* number) {
   HIP_CHECK(hipGraphDestroy(graph));
 }
 
-static int HipGraphLaunch_Positive_Simple(hipStream_t stream) {
+/**
+ * Test Description
+ * ------------------------
+ *    - Basic positive test for hipGraphExecDestroy
+ *    - create an executable graph and then destroy it
+ * Test source
+ * ------------------------
+ *    - unit/graph/hipGraphExecDestroy.cc
+ * Test requirements
+ * ------------------------
+ *    - HIP_VERSION >= 5.2
+ */
+TEST_CASE("Unit_hipGraphExecDestroy_Positive_Basic") {
   int number = 5;
-
   hipGraphExec_t graph_exec;
   CreateTestExecutableGraph(&graph_exec, &number);
-
-  HIP_CHECK(hipGraphLaunch(graph_exec, stream));
-  HIP_CHECK(hipStreamSynchronize(stream));
-  REQUIRE(number == 1);
-
-  HIP_CHECK(hipGraphExecDestroy(graph_exec));
-}
-
-
-/**
- * Test Description
- * ------------------------
- *    - Basic positive test for hipGraphLaunch
- *        -# stream as a created stream
- *        -# with stream as hipStreamPerThread
- * Test source
- * ------------------------
- *    - unit/graph/hipGraphLaunch.cc
- * Test requirements
- * ------------------------
- *    - HIP_VERSION >= 5.2
- */
-TEST_CASE("Unit_hipGraphUpload_Positive") {
-  SECTION("stream as a created stream") {
-    hipStream_t stream;
-    HIP_CHECK(hipStreamCreate(&stream));
-    HipGraphLaunch_Positive_Simple(stream);
-    HIP_CHECK(hipStreamDestroy(stream));
-  }
-
-  SECTION("with stream as hipStreamPerThread") {
-    HipGraphLaunch_Positive_Simple(hipStreamPerThread);
-  }
+  REQUIRE(hipGraphExecDestroy(graph_exec) == hipSuccess);
 }
 
 /**
  * Test Description
  * ------------------------
- *    - Negative parameter test for hipGraphLaunch
- *        -# graphExec is nullptr and stream is a created stream
- *        -# graphExec is nullptr and stream is hipStreamPerThread
- *        -# graphExec is an empty object
- *        -# graphExec is destroyed before calling hipGraphLaunch
+ *    - Basic negative parameter test for hipGraphExecDestroy
+ *    - try to destroy an empty hipGraphExec_t object
  * Test source
  * ------------------------
- *    - unit/graph/hipGraphLaunch.cc
+ *    - unit/graph/hipGraphExecDestroy.cc
  * Test requirements
  * ------------------------
  *    - HIP_VERSION >= 5.2
  */
-TEST_CASE("hipGraphUpload_Negative_Parameters") {
-  SECTION("graphExec is nullptr and stream is a created stream") {
-    hipStream_t stream;
-    hipError_t ret;
-    HIP_CHECK(hipStreamCreate(&stream));
-    ret = hipGraphLaunch(nullptr, stream);
-    HIP_CHECK(hipStreamDestroy(stream));
-    REQUIRE(ret == hipErrorInvalidValue);
-  }
-
-  SECTION("graphExec is nullptr and stream is hipStreamPerThread") {
-    HIP_CHECK_ERROR(hipGraphLaunch(nullptr, hipStreamPerThread), hipErrorInvalidValue);
-  }
-
-  SECTION("graphExec is an empty object") {
-    hipGraphExec_t graph_exec{};
-    HIP_CHECK_ERROR(hipGraphLaunch(graph_exec, hipStreamPerThread), hipErrorInvalidValue);
-  }
-
-  SECTION("graphExec is destroyed") {
-    int number = 5;
-    hipGraphExec_t graph_exec;
-    CreateTestExecutableGraph(&graph_exec, &number);
-    HIP_CHECK(hipGraphLaunch(graph_exec, hipStreamPerThread));
-    HIP_CHECK(hipStreamSynchronize(hipStreamPerThread));
-    REQUIRE(number == 1);
-    HIP_CHECK(hipGraphExecDestroy(graph_exec));
-    HIP_CHECK_ERROR(hipGraphLaunch(graph_exec, hipStreamPerThread), hipErrorInvalidValue);
-  }
+TEST_CASE("Unit_hipGraphExecDestroy_Negative_Parameters") {
+  hipGraphExec_t graph_exec{};
+  HIP_CHECK_ERROR(hipGraphExecDestroy(graph_exec), hipErrorInvalidValue);
 }
