@@ -3,6 +3,9 @@ set(TEST_SRC
     saxpy.cc
     warpsize.cc
     hipRtcFunctional.cc
+    hiprtcHelper.cc
+    hiprtcLinkFile.cc
+    hiprtcLinkData.cc
 )
 
 # AMD only tests
