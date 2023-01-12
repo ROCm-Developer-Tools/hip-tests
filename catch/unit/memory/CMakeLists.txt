@@ -98,6 +98,7 @@ set(TEST_SRC
     hipMemsetAsync.cc
     hipMemAdvise.cc
     hipMemRangeGetAttributes.cc
+    hipMallocAsync.cc
 )
 else()
 set(TEST_SRC
