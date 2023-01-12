@@ -24,22 +24,40 @@ THE SOFTWARE.
 
 
 TEST_CASE("Unit_hipGetChannelDesc_CreateAndGet") {
-  CHECK_IMAGE_SUPPORT
+  CHECK_IMAGE_SUPPORT;
 
   hipChannelFormatDesc chan_test, chan_desc;
-  hipArray *hipArray;
+  hipArray* hip_array;
 
   chan_desc = hipCreateChannelDesc(32, 0, 0, 0, hipChannelFormatKindSigned);
-  HIP_CHECK(hipMallocArray(&hipArray, &chan_desc, C, R, 0));
-  HIP_CHECK(hipGetChannelDesc(&chan_test, hipArray));
+  HIP_CHECK(hipMallocArray(&hip_array, &chan_desc, C, R, 0));
+  HIP_CHECK(hipGetChannelDesc(&chan_test, hip_array));
 
-  if ((chan_test.x != 32) || (chan_test.y != 0)
-     || (chan_test.z != 0) || (chan_test.f != 0)) {
-    INFO("Mismatch observed : " << chan_test.x << chan_test.y
-                                << chan_test.z << chan_test.f);
+  if ((chan_test.x != 32) || (chan_test.y != 0) || (chan_test.z != 0) || (chan_test.f != 0)) {
+    INFO("Mismatch observed : " << chan_test.x << chan_test.y << chan_test.z << chan_test.f);
     REQUIRE(false);
   }
 
+  HIP_CHECK(hipFreeArray(hip_array));
+}
 
-  HIP_CHECK(hipFreeArray(hipArray));
+
+TEST_CASE("Unit_hipGetChannelDesc_Negative_Parameters") {
+  CHECK_IMAGE_SUPPORT;
+
+  hipChannelFormatDesc chan_test, chan_desc;
+  hipArray* hip_array;
+
+  chan_desc = hipCreateChannelDesc(32, 0, 0, 0, hipChannelFormatKindSigned);
+  HIP_CHECK(hipMallocArray(&hip_array, &chan_desc, C, R, 0));
+
+  SECTION("desc is nullptr") {
+    HIP_CHECK_ERROR(hipGetChannelDesc(nullptr, hip_array), hipErrorInvalidValue);
+  }
+
+  SECTION("array is nullptr") {
+    HIP_CHECK_ERROR(hipGetChannelDesc(&chan_test, nullptr), hipErrorInvalidHandle);
+  }
+
+  HIP_CHECK(hipFreeArray(hip_array));
 }
